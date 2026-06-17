@@ -1,0 +1,625 @@
+/* ============================================================
+   ChamaTrust Meeting Room — Premium CSS
+   ============================================================ */
+
+/* ---------- Lobby ---------- */
+.meeting-lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 24px;
+  text-align: center;
+  padding: 32px;
+}
+
+.meeting-lobby-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 40px rgba(0, 210, 255, 0.35);
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.meeting-lobby-title {
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff 0%, #00d2ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.meeting-lobby-subtitle {
+  color: rgba(255,255,255,0.55);
+  font-size: 1rem;
+  max-width: 480px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.meeting-lobby-input {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 14px 18px;
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.meeting-lobby-input:focus {
+  border-color: rgba(0, 210, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.12);
+}
+
+.meeting-lobby-input::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+.meeting-start-btn {
+  background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 16px 40px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 6px 24px rgba(0, 210, 255, 0.35);
+  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
+}
+
+.meeting-start-btn:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 10px 32px rgba(0, 210, 255, 0.5);
+}
+
+.meeting-lobby-info {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lobby-info-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.65);
+}
+
+/* ---------- Room Layout ---------- */
+.meeting-room {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 16px;
+  height: 100%;
+  min-height: 85vh;
+}
+
+.meeting-room-body {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .meeting-room-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Video Grid ---------- */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.video-tile {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0d1117;
+  border: 2px solid rgba(255,255,255,0.08);
+  aspect-ratio: 16/10;
+  transition: border-color 0.3s ease;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.video-tile.speaking {
+  border-color: #00d2ff;
+  box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.25), 0 8px 30px rgba(0,0,0,0.4);
+  animation: speaking-glow 1.2s ease-in-out infinite;
+}
+
+.video-tile.local {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-tile-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.video-tile-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.muted-icon {
+  color: #ef4444;
+  width: 14px;
+  height: 14px;
+}
+
+.video-tile-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 0 30px rgba(0, 210, 255, 0.2);
+}
+
+/* ---------- Speaking Pulse ---------- */
+@keyframes speaking-glow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.25), 0 8px 30px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(0, 210, 255, 0.15), 0 8px 30px rgba(0,0,0,0.4); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 30px rgba(0, 210, 255, 0.35); }
+  50%       { box-shadow: 0 0 50px rgba(0, 210, 255, 0.6); }
+}
+
+.speaking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00d2ff;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.7); }
+}
+
+/* ---------- Side Panel (transcript + AI) ---------- */
+.meeting-side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(85vh - 100px);
+}
+
+/* ---------- Transcript ---------- */
+.transcript-panel {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 18px;
+  flex: 1;
+  min-height: 200px;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+.transcript-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.transcript-line {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.75);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  animation: slide-in 0.4s ease;
+}
+
+.transcript-line .speaker {
+  font-weight: 800;
+  color: #00d2ff;
+  margin-right: 6px;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.transcript-empty {
+  color: rgba(255,255,255,0.25);
+  font-size: 0.82rem;
+  text-align: center;
+  margin: auto;
+  line-height: 1.6;
+}
+
+/* ---------- AI Summary Panel ---------- */
+.ai-summary-panel {
+  background: linear-gradient(135deg, rgba(58, 123, 213, 0.12) 0%, rgba(0, 210, 255, 0.06) 100%);
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  border-radius: 18px;
+  padding: 18px;
+  overflow-y: auto;
+  max-height: 340px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 210, 255, 0.2) transparent;
+}
+
+.ai-summary-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.85rem;
+}
+
+.ai-dot-pulse {
+  display: flex;
+  gap: 4px;
+}
+
+.ai-dot-pulse span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00d2ff;
+  animation: dot-bounce 1.2s ease-in-out infinite;
+}
+
+.ai-dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+.ai-dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40%           { transform: scale(1.1); opacity: 1; }
+}
+
+.summary-section {
+  margin-bottom: 14px;
+}
+
+.summary-section-title {
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(0, 210, 255, 0.8);
+  margin-bottom: 6px;
+}
+
+.summary-text {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.4;
+}
+
+.summary-list li::before {
+  content: '›';
+  color: #00d2ff;
+  font-weight: 900;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.action-item {
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.action-assignee {
+  font-weight: 800;
+  color: #00d2ff;
+}
+
+/* ---------- Toolbar ---------- */
+.meeting-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255,255,255,0.14);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.toolbar-btn.active {
+  background: rgba(0, 210, 255, 0.2);
+  border-color: rgba(0, 210, 255, 0.4);
+  color: #00d2ff;
+}
+
+.toolbar-btn.danger {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.toolbar-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 6px 20px rgba(239,68,68,0.25);
+}
+
+.toolbar-btn.off {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.toolbar-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: inherit;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 36px;
+  background: rgba(255,255,255,0.1);
+}
+
+.meeting-timer {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 1px;
+  padding: 0 8px;
+}
+
+/* ---------- Post-Meeting Minutes ---------- */
+.minutes-view {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.minutes-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.minutes-title {
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff 0%, #00d2ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 8px;
+}
+
+.minutes-meta {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.85rem;
+}
+
+.minutes-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.minutes-card-title {
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(0, 210, 255, 0.8);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.minutes-download-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 6px 24px rgba(0, 210, 255, 0.3);
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.minutes-download-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 32px rgba(0, 210, 255, 0.45);
+}
+
+.new-meeting-btn {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.new-meeting-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* ---------- Attendee chips ---------- */
+.attendee-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attendee-chip {
+  background: rgba(58, 123, 213, 0.2);
+  border: 1px solid rgba(58, 123, 213, 0.3);
+  color: rgba(255,255,255,0.8);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}

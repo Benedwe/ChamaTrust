@@ -1,0 +1,28 @@
+{
+  "name": "chamatrust",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ChamaTrust is a mobile-first Web3 savings, lending, and governance platform for African community finance groups.",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "npm run dev:web",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:api": "npm --workspace apps/api run dev",
+    "build": "npm --workspace apps/web run build",
+    "test": "npm run test:contracts",
+    "test:contracts": "hardhat test",
+    "deploy:fuji": "hardhat run scripts/deploy.js --network fuji"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.10"
+  },
+  "dependencies": {
+    "ethers": "^6.13.2"
+  }
+}
