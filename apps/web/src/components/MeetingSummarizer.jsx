@@ -76,11 +76,14 @@ export function MeetingSummarizer() {
   const timer = useTimer();
 
   /* ── Attach local video stream ── */
+  // Runs whenever stream is acquired OR camOn flips back to true,
+  // because toggling camera off/on unmounts & remounts the <video> element,
+  // so we must re-assign srcObject each time it mounts.
   useEffect(() => {
-    if (stream && localVideoRef.current) {
+    if (stream && camOn && localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
-  }, [stream]);
+  }, [stream, camOn]);
 
   /* ── Auto-scroll transcript ── */
   useEffect(() => {
@@ -191,18 +194,45 @@ export function MeetingSummarizer() {
 
   /* ── Toggle mic ── */
   const toggleMic = useCallback(() => {
-    stream?.getAudioTracks().forEach(t => { t.enabled = !micOn; });
-    if (micOn) recognitionRef.current?.stop();
-    else {
-      try { recognitionRef.current?.start(); } catch {}
+    const nextMicOn = !micOn;
+    stream?.getAudioTracks().forEach(t => { t.enabled = nextMicOn; });
+
+    if (!nextMicOn) {
+      // Muting — stop recognition cleanly
+      try { recognitionRef.current?.stop(); } catch {}
+      recognitionRef.current = null;
+      setIsListening(false);
+    } else {
+      // Unmuting — create a fresh recognition instance (calling .start() on
+      // a stopped instance throws InvalidStateError in most browsers)
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recog = new SpeechRecognition();
+        recog.continuous     = true;
+        recog.interimResults = false;
+        recog.lang           = "en-GB";
+        recog.onresult = (event) => {
+          const text = event.results[event.results.length - 1][0].transcript.trim();
+          if (text) setTranscript(prev => [...prev, { speaker: "You", text }]);
+        };
+        recog.onerror = () => {};
+        try {
+          recog.start();
+          recognitionRef.current = recog;
+          setIsListening(true);
+        } catch {}
+      }
     }
-    setMicOn(m => !m);
+    setMicOn(nextMicOn);
   }, [stream, micOn]);
 
   /* ── Toggle cam ── */
   const toggleCam = useCallback(() => {
-    stream?.getVideoTracks().forEach(t => { t.enabled = !camOn; });
-    setCamOn(c => !c);
+    const nextCamOn = !camOn;
+    stream?.getVideoTracks().forEach(t => { t.enabled = nextCamOn; });
+    setCamOn(nextCamOn);
+    // After setCamOn(true) the <video> element remounts; the useEffect
+    // [stream, camOn] will fire and re-assign srcObject automatically.
   }, [stream, camOn]);
 
   /* ── Download minutes ── */

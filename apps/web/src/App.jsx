@@ -1,21 +1,25 @@
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDownToLine,
   BadgeCheck,
   Banknote,
   BellRing,
+  CheckCircle2,
   ChevronRight,
   CircleDollarSign,
   Landmark,
   LineChart as LineChartIcon,
+  Loader2,
   LockKeyhole,
   ShieldCheck,
   Sparkles,
   Trophy,
   Users,
   Vote,
-  WalletCards
+  WalletCards,
+  X,
+  XCircle
 } from "lucide-react";
 import { Card } from "./components/Card";
 import { ContributionHeatmap, LoanPerformanceChart, SavingsChart, TreasuryPie } from "./components/DashboardCharts";
@@ -23,7 +27,7 @@ import { FlowRail } from "./components/FlowRail";
 import { MetricCard } from "./components/MetricCard";
 import { contributors, group, momoProviders, proposals, transactions } from "./data/demoData";
 import { compactNumber, formatMoney } from "./lib/format";
-import { connectWallet } from "./lib/wallet";
+import { connectWallet, isCoreInstalled, CORE_INSTALL_URL } from "./lib/wallet";
 import { AgriFinance } from "./components/AgriFinance";
 import { InvestmentPools } from "./components/InvestmentPools";
 import { AiInsights } from "./components/AiInsights";
@@ -31,6 +35,93 @@ import { GovernanceAi } from "./components/GovernanceAi";
 import { MeetingSummarizer } from "./components/MeetingSummarizer";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import "./styles/premium.css";
+
+/** Truncates a wallet address: 0x1234...abcd */
+function truncateAddress(addr) {
+  if (!addr || addr.length < 10) return addr;
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
+/** Auto-dismissing toast notification */
+function WalletToast({ status, address, error, onDismiss }) {
+  useEffect(() => {
+    if (status === "connected") {
+      const t = setTimeout(onDismiss, 5000);
+      return () => clearTimeout(t);
+    }
+  }, [status, onDismiss]);
+
+  return (
+    <AnimatePresence>
+      {status !== "idle" && (
+        <motion.div
+          key="wallet-toast"
+          initial={{ opacity: 0, y: -24, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -16, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          style={{
+            position: "fixed",
+            top: "80px",
+            right: "20px",
+            zIndex: 9999,
+            minWidth: "280px",
+            maxWidth: "380px",
+            borderRadius: "14px",
+            padding: "16px 18px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
+            backdropFilter: "blur(16px)",
+            border: status === "connected"
+              ? "1px solid rgba(0, 210, 110, 0.35)"
+              : status === "error"
+              ? "1px solid rgba(239, 68, 68, 0.35)"
+              : "1px solid rgba(255,255,255,0.12)",
+            background: status === "connected"
+              ? "rgba(0, 30, 20, 0.85)"
+              : status === "error"
+              ? "rgba(40, 10, 10, 0.88)"
+              : "rgba(15, 20, 30, 0.85)",
+          }}
+        >
+          {status === "connecting" && (
+            <Loader2 size={20} style={{ color: "#60a5fa", flexShrink: 0, marginTop: 2, animation: "spin 1s linear infinite" }} />
+          )}
+          {status === "connected" && (
+            <CheckCircle2 size={20} style={{ color: "#00d26a", flexShrink: 0, marginTop: 2 }} />
+          )}
+          {status === "error" && (
+            <XCircle size={20} style={{ color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
+          )}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 700, fontSize: "14px", color: "#fff", margin: 0 }}>
+              {status === "connecting" && "Connecting Core wallet…"}
+              {status === "connected" && "Core wallet connected! ✓"}
+              {status === "error" && "Connection failed"}
+            </p>
+            {status === "connected" && address && (
+              <p style={{ fontSize: "12px", color: "#00d26a", marginTop: 4, fontFamily: "monospace", fontWeight: 600 }}>
+                {truncateAddress(address)}
+              </p>
+            )}
+            {status === "error" && error && (
+              <p style={{ fontSize: "12px", color: "#fca5a5", marginTop: 4 }}>{error}</p>
+            )}
+          </div>
+          <button
+            onClick={onDismiss}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "rgba(255,255,255,0.5)", flexShrink: 0 }}
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 const ussdCodes = {
   "M-Pesa": "*150*00#",
@@ -76,22 +167,61 @@ function App() {
   const [provider, setProvider] = useState("M-Pesa");
   const [activeFlow, setActiveFlow] = useState("deposit");
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const [wallet, setWallet] = useState(null);
+  const [wallet, setWallet] = useState(null);          // null = not connected, string = real address
+  const [walletNetwork, setWalletNetwork] = useState(null); // e.g. "Avalanche Fuji C-Chain"
+  const [walletStatus, setWalletStatus] = useState("idle"); // idle | connecting | connected | error
+  const [walletError, setWalletError] = useState("");
+  const [coreInstalled, setCoreInstalled] = useState(true); // assume true until checked
   const [showUssdInstructions, setShowUssdInstructions] = useState(false);
   const monthlyPercent = useMemo(() => Math.round((group.balance / group.contributionTarget) * 100), []);
 
+  // Detect Core wallet on mount
+  useEffect(() => {
+    setCoreInstalled(isCoreInstalled());
+  }, []);
+
   async function handleWallet() {
+    if (wallet) return; // already connected — do nothing
+
+    // If Core isn't installed, send user to install page
+    if (!isCoreInstalled()) {
+      window.open(CORE_INSTALL_URL, "_blank", "noopener,noreferrer");
+      setCoreInstalled(false);
+      return;
+    }
+
+    setWalletStatus("connecting");
+    setWalletError("");
     try {
       const session = await connectWallet();
+      if (!session?.address) throw new Error("No address returned from Core wallet.");
       setWallet(session.address);
-    } catch {
-      setWallet("Demo wallet ready");
+      setWalletNetwork(session.network);
+      setWalletStatus("connected");
+    } catch (err) {
+      let msg = err?.message || "Could not connect Core wallet. Please try again.";
+      // Friendly message for the CORE_NOT_INSTALLED sentinel
+      if (msg === "CORE_NOT_INSTALLED") {
+        msg = "Avalanche Core wallet not detected. Please install Core to continue.";
+        setCoreInstalled(false);
+      }
+      // User rejected the request
+      if (err?.code === 4001) msg = "Connection rejected. Please approve the request in Core wallet.";
+      setWalletError(msg);
+      setWalletStatus("error");
+      setWallet(null);
     }
+  }
+
+  function dismissToast() {
+    setWalletStatus("idle");
+    setWalletError("");
   }
 
   const handleDepositClick = () => {
     if (!wallet) {
-      alert("Please connect your wallet first to deposit.");
+      setWalletStatus("error");
+      setWalletError("Please connect your Core wallet first to deposit.");
       return;
     }
     if (activeFlow === "deposit") {
@@ -102,6 +232,14 @@ function App() {
 
   return (
     <main className="mesh min-h-screen text-white">
+      {/* Wallet status toast */}
+      <WalletToast
+        status={walletStatus}
+        address={wallet}
+        error={walletError}
+        onDismiss={dismissToast}
+      />
+
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 phone-safe md:px-6 lg:px-8">
         <header className="sticky top-0 z-20 -mx-4 border-b border-white/50 bg-paper/75 px-4 py-3 backdrop-blur-xl md:static md:mx-0 md:border-none md:bg-transparent md:px-0 text-ink">
           <div className="flex items-center justify-between gap-3">
@@ -114,13 +252,81 @@ function App() {
                 <p className="text-xs font-semibold text-slate-500">Avalanche-powered community finance</p>
               </div>
             </div>
-            <button
-              onClick={handleWallet}
-              className="flex min-h-10 items-center gap-2 rounded-lg bg-ink px-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/20"
-            >
-              <WalletCards size={17} />
-              <span className="hidden sm:inline">{wallet ? "Connected" : "Connect"}</span>
-            </button>
+
+            {/* ── Avalanche Core wallet button ── */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <button
+                id="wallet-connect-btn"
+                onClick={handleWallet}
+                disabled={walletStatus === "connecting" || !!wallet}
+                title={
+                  wallet
+                    ? `Connected on ${walletNetwork}: ${wallet}`
+                    : !coreInstalled
+                    ? "Install Avalanche Core wallet"
+                    : "Connect Avalanche Core wallet"
+                }
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-white shadow-lg"
+                style={{
+                  background: wallet
+                    ? "linear-gradient(135deg, #003d1f 0%, #00522a 100%)"
+                    : !coreInstalled
+                    ? "linear-gradient(135deg, #e84142 0%, #b91c1c 100%)"
+                    : walletStatus === "error"
+                    ? "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)"
+                    : "linear-gradient(135deg, #e84142 0%, #c0392b 100%)",  /* Avalanche red */
+                  border: wallet
+                    ? "1px solid rgba(0,210,110,0.45)"
+                    : !coreInstalled
+                    ? "1px solid rgba(232,65,66,0.5)"
+                    : walletStatus === "error"
+                    ? "1px solid rgba(239,68,68,0.4)"
+                    : "1px solid rgba(232,65,66,0.4)",
+                  cursor: wallet ? "default" : walletStatus === "connecting" ? "wait" : "pointer",
+                  transition: "all 0.25s ease",
+                  minWidth: "148px",
+                }}
+              >
+                {walletStatus === "connecting" ? (
+                  <Loader2 size={15} style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                ) : wallet ? (
+                  /* Glowing green connected dot */
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: "#00d26a",
+                    boxShadow: "0 0 8px #00d26a, 0 0 2px #00d26a",
+                    flexShrink: 0,
+                    display: "inline-block",
+                  }} />
+                ) : (
+                  /* Core "A" triangle mark (SVG) */
+                  <svg width="15" height="15" viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M16 3 L30 28 H2 Z" fill="white" opacity="0.9" />
+                  </svg>
+                )}
+                <span className="hidden sm:inline">
+                  {walletStatus === "connecting"
+                    ? "Connecting…"
+                    : wallet
+                    ? truncateAddress(wallet)
+                    : !coreInstalled
+                    ? "Install Core"
+                    : "Connect Core"}
+                </span>
+              </button>
+
+              {/* Avalanche network badge — only shown when connected */}
+              {wallet && walletNetwork && (
+                <span style={{
+                  fontSize: "10px", fontWeight: 700, letterSpacing: "0.04em",
+                  color: "#00d26a", background: "rgba(0,210,106,0.1)",
+                  border: "1px solid rgba(0,210,106,0.25)",
+                  borderRadius: "6px", padding: "2px 8px",
+                }}>
+                  ⬡ {walletNetwork}
+                </span>
+              )}
+            </div>
           </div>
         </header>
 

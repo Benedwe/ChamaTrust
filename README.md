@@ -10,6 +10,14 @@ ChamaTrust is a decentralized savings, lending, and governance platform for Afri
 - Hardhat deployment and unit test scaffolding for Avalanche Fuji.
 - Documentation for architecture, Mobile Money integration, Avalanche deployment, security, and investor demo data.
 
+## Demo Video
+
+<video src="./Media/Screencast%20from%202026-06-21%2001-25-29.webm" controls width="100%">
+  Watch the ChamaTrust demo video.
+</video>
+
+[Watch the ChamaTrust demo video](./Media/Screencast%20from%202026-06-21%2001-25-29.webm)
+
 ## Quick Start
 
 ```bash
@@ -37,3 +45,4 @@ Copy `.env.example` to `.env` and fill in values for MongoDB, JWT signing, Avala
 
 Members see familiar actions: join, deposit, vote, borrow, repay, withdraw. Under the hood, ChamaTrust records transparent treasury state on Avalanche and coordinates Mobile Money settlement through secure backend provider adapters.
 # ChamaTrust
+ 
