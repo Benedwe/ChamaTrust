@@ -34,6 +34,7 @@ import { AiInsights } from "./components/AiInsights";
 import { GovernanceAi } from "./components/GovernanceAi";
 import { MeetingSummarizer } from "./components/MeetingSummarizer";
 import { VoiceAssistant } from "./components/VoiceAssistant";
+import { CreateChamaModal } from "./components/CreateChamaModal";
 import "./styles/premium.css";
 
 /** Truncates a wallet address: 0x1234...abcd */
@@ -123,12 +124,71 @@ function WalletToast({ status, address, error, onDismiss }) {
   );
 }
 
+function ChamaSuccessToast({ show, name, onDismiss }) {
+  useEffect(() => {
+    if (show) {
+      const t = setTimeout(onDismiss, 5000);
+      return () => clearTimeout(t);
+    }
+  }, [show, onDismiss]);
+
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, y: -24, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -16, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          style={{
+            position: "fixed",
+            top: "80px",
+            right: "20px",
+            zIndex: 9999,
+            minWidth: "280px",
+            maxWidth: "380px",
+            borderRadius: "14px",
+            padding: "16px 18px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
+            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(0, 210, 110, 0.35)",
+            background: "rgba(0, 30, 20, 0.85)",
+          }}
+        >
+          <CheckCircle2 size={20} style={{ color: "#00d26a", flexShrink: 0, marginTop: 2 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 700, fontSize: "14px", color: "#fff", margin: 0 }}>
+              Chama Created Successfully! ✓
+            </p>
+            <p style={{ fontSize: "12px", color: "#00d26a", marginTop: 4, fontWeight: 600 }}>
+              {name}
+            </p>
+          </div>
+          <button
+            onClick={onDismiss}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "rgba(255,255,255,0.5)", flexShrink: 0 }}
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 const ussdCodes = {
   "M-Pesa": "*150*00#",
   "Airtel Money": "*150*60#",
   "Tigo Pesa": "*150*01#",
   "HaloPesa": "*150*88#"
 };
+
+const demoWalletAddress = "0x8f23aB38Ff09D6F2a9A59b2F2e156a601E06339A";
+const demoWalletNetwork = "Avalanche Fuji Demo";
 
 const ussdSteps = {
   "M-Pesa": [
@@ -173,6 +233,8 @@ function App() {
   const [walletError, setWalletError] = useState("");
   const [coreInstalled, setCoreInstalled] = useState(true); // assume true until checked
   const [showUssdInstructions, setShowUssdInstructions] = useState(false);
+  const [isCreateChamaOpen, setIsCreateChamaOpen] = useState(false);
+  const [createdChamaName, setCreatedChamaName] = useState("");
   const monthlyPercent = useMemo(() => Math.round((group.balance / group.contributionTarget) * 100), []);
 
   // Detect Core wallet on mount
@@ -218,15 +280,21 @@ function App() {
     setWalletError("");
   }
 
+  function handleDemoWallet() {
+    setWallet(demoWalletAddress);
+    setWalletNetwork(demoWalletNetwork);
+    setWalletStatus("connected");
+    setWalletError("");
+  }
+
   const handleDepositClick = () => {
     if (!wallet) {
       setWalletStatus("error");
-      setWalletError("Please connect your Core wallet first to deposit.");
+      setWalletError("Connect Core or use the demo wallet to preview a deposit.");
       return;
     }
     if (activeFlow === "deposit") {
       setShowUssdInstructions(true);
-      window.location.href = `tel:${ussdCodes[provider].replace(/#/g, "%23")}`;
     }
   };
 
@@ -238,6 +306,11 @@ function App() {
         address={wallet}
         error={walletError}
         onDismiss={dismissToast}
+      />
+      <ChamaSuccessToast 
+        show={!!createdChamaName} 
+        name={createdChamaName} 
+        onDismiss={() => setCreatedChamaName("")} 
       />
 
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 phone-safe md:px-6 lg:px-8">
@@ -255,6 +328,17 @@ function App() {
 
             {/* ── Avalanche Core wallet button ── */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <div className="flex items-center gap-2">
+              {!wallet && (
+                <button
+                  onClick={handleDemoWallet}
+                  className="hidden min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-ink shadow-sm sm:flex"
+                  title="Use a simulated Fuji wallet for demo mode"
+                >
+                  <Sparkles size={15} />
+                  Demo wallet
+                </button>
+              )}
               <button
                 id="wallet-connect-btn"
                 onClick={handleWallet}
@@ -314,6 +398,7 @@ function App() {
                     : "Connect Core"}
                 </span>
               </button>
+              </div>
 
               {/* Avalanche network badge — only shown when connected */}
               {wallet && walletNetwork && (
@@ -406,12 +491,18 @@ function App() {
             <p className="mt-4 max-w-2xl text-sm leading-6 text-emerald-50 md:text-base">
               Members use familiar Mobile Money flows while treasury actions settle transparently through Avalanche.
             </p>
-            <div className="mt-6 grid grid-cols-3 gap-2">
+            <div className="mt-6 grid grid-cols-4 gap-2">
               {["Join", "Deposit", "Vote"].map((action) => (
                 <button key={action} className="rounded-lg bg-white px-3 py-3 text-sm font-extrabold text-ink">
                   {action}
                 </button>
               ))}
+              <button 
+                onClick={() => setIsCreateChamaOpen(true)}
+                className="rounded-lg bg-mint px-3 py-3 text-sm font-extrabold text-ink flex items-center justify-center gap-1"
+              >
+                Create ✚
+              </button>
             </div>
           </motion.div>
 
@@ -651,6 +742,14 @@ function App() {
         )}
       </div>
       <VoiceAssistant />
+      <CreateChamaModal 
+        isOpen={isCreateChamaOpen} 
+        onClose={() => setIsCreateChamaOpen(false)} 
+        onSuccess={(chama) => {
+          setIsCreateChamaOpen(false);
+          setCreatedChamaName(chama.name);
+        }} 
+      />
     </main>
   );
 }

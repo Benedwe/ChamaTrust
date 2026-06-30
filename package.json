@@ -14,7 +14,10 @@
     "build": "npm --workspace apps/web run build",
     "test": "npm run test:contracts",
     "test:contracts": "hardhat test",
-    "deploy:fuji": "hardhat run scripts/deploy.js --network fuji"
+    "deploy:fuji": "hardhat run scripts/deploy.js --network fuji",
+    "db:seed": "node scripts/seed-db.mjs",
+    "db:seed:force": "node scripts/seed-db.mjs --force",
+    "db:status": "node scripts/db-status.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

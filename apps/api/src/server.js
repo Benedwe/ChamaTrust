@@ -13,6 +13,7 @@ import mobileMoneyRoutes from "./routes/mobileMoney.js";
 import transactionRoutes from "./routes/transactions.js";
 import ussdRoutes from "./routes/ussd.js";
 import aiRoutes from "./routes/ai.js";
+import meetingRoutes from "./routes/meetings.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -36,11 +37,13 @@ app.use("/mobile-money", mobileMoneyRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/ussd", ussdRoutes);
 app.use("/ai", aiRoutes);
+app.use("/meetings", meetingRoutes);
 app.use(errorHandler);
 
 async function start() {
   if (process.env.MONGODB_URI) {
     await mongoose.connect(process.env.MONGODB_URI);
+    console.log("ChamaTrust API connected to MongoDB");
   }
 
   app.listen(port, () => {
