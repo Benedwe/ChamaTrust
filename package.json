@@ -17,7 +17,8 @@
     "deploy:fuji": "hardhat run scripts/deploy.js --network fuji",
     "db:seed": "node scripts/seed-db.mjs",
     "db:seed:force": "node scripts/seed-db.mjs --force",
-    "db:status": "node scripts/db-status.mjs"
+    "db:status": "node scripts/db-status.mjs",
+    "demo:fuji": "hardhat run scripts/demo-fuji.js --network fuji"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
