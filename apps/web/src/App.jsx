@@ -35,6 +35,9 @@ import { GovernanceAi } from "./components/GovernanceAi";
 import { MeetingSummarizer } from "./components/MeetingSummarizer";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import { CreateChamaModal } from "./components/CreateChamaModal";
+import { AuthScreen } from "./components/AuthScreen";
+import { InviteMembersModal } from "./components/InviteMembersModal";
+import { getSession, clearSession } from "./lib/auth";
 import "./styles/premium.css";
 
 /** Truncates a wallet address: 0x1234...abcd */
@@ -235,6 +238,9 @@ function App() {
   const [showUssdInstructions, setShowUssdInstructions] = useState(false);
   const [isCreateChamaOpen, setIsCreateChamaOpen] = useState(false);
   const [createdChamaName, setCreatedChamaName] = useState("");
+  const [inviteChamaId, setInviteChamaId] = useState(null);
+  const [session, setSession] = useState(getSession);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const monthlyPercent = useMemo(() => Math.round((group.balance / group.contributionTarget) * 100), []);
 
   // Detect Core wallet on mount
@@ -300,6 +306,25 @@ function App() {
 
   return (
     <main className="mesh min-h-screen text-white">
+      <AnimatePresence>
+        {isAuthOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-ink"
+          >
+            <AuthScreen
+              onAuth={(token, user) => {
+                setSession({ token, user });
+                setIsAuthOpen(false);
+              }}
+              onClose={() => setIsAuthOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Wallet status toast */}
       <WalletToast
         status={walletStatus}
@@ -329,6 +354,21 @@ function App() {
             {/* ── Avalanche Core wallet button ── */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
               <div className="flex items-center gap-2">
+              {session ? (
+                <button
+                  onClick={() => { clearSession(); setSession(null); }}
+                  className="hidden min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm sm:flex hover:bg-white/10"
+                >
+                  Log Out ({session.user.fullName.split(' ')[0]})
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsAuthOpen(true)}
+                  className="hidden min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm sm:flex hover:bg-white/10"
+                >
+                  Log In
+                </button>
+              )}
               {!wallet && (
                 <button
                   onClick={handleDemoWallet}
@@ -748,7 +788,13 @@ function App() {
         onSuccess={(chama) => {
           setIsCreateChamaOpen(false);
           setCreatedChamaName(chama.name);
-        }} 
+          setInviteChamaId(chama._id);
+        }}
+        onLoginRequest={() => setIsAuthOpen(true)}
+      />
+      <InviteMembersModal 
+        chamaId={inviteChamaId} 
+        onClose={() => setInviteChamaId(null)} 
       />
     </main>
   );

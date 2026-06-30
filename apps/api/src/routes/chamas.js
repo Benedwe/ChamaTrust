@@ -41,4 +41,36 @@ router.post("/:id/join", requireAuth, async (req, res) => {
   res.json({ chama });
 });
 
+router.post("/:id/invite", requireAuth, async (req, res) => {
+  const schema = z.object({
+    walletAddress: z.string().min(5),
+    phone: z.string().min(9)
+  });
+  const { walletAddress, phone } = schema.parse(req.body);
+
+  const chama = await Chama.findById(req.params.id);
+  if (!chama) {
+    return res.status(404).json({ error: "Chama not found" });
+  }
+
+  const requester = chama.members.find(m => m.walletAddress.toLowerCase() === req.user.sub.toLowerCase());
+  if (!requester || requester.role !== "admin") {
+    return res.status(403).json({ error: "Only admins can invite members" });
+  }
+
+  if (chama.members.some(m => m.walletAddress.toLowerCase() === walletAddress.toLowerCase())) {
+    return res.status(400).json({ error: "Member is already in the Chama" });
+  }
+
+  chama.members.push({
+    walletAddress,
+    phone,
+    role: "member",
+    trustScore: 50
+  });
+
+  await chama.save();
+  res.json({ chama });
+});
+
 export default router;

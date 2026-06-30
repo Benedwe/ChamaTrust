@@ -30,7 +30,7 @@ export function VoiceAssistant() {
       
       // Simulate AI processing and responding
       setTimeout(() => {
-        fetch("http://localhost:8080/ai/voice", {
+        fetch("http://localhost:8081/ai/voice", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: "Nimechangia kiasi gani mwezi huu?" })

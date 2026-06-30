@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Landmark, ShieldCheck, Sparkles, Users, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Landmark, ShieldCheck, Sparkles, Users, Eye, EyeOff, AlertCircle, X } from "lucide-react";
 import { register, login, registerDemo } from "../lib/auth";
 import "../styles/auth.css";
 
@@ -198,7 +198,7 @@ function SignInForm({ onSuccess }) {
 }
 
 /* ── Main AuthScreen ──────────────────────────────────────── */
-export function AuthScreen({ onAuth }) {
+export function AuthScreen({ onAuth, onClose }) {
   const [tab, setTab] = useState("signup"); // "signup" | "signin"
 
   function handleSuccess(token, user) {
@@ -215,10 +215,19 @@ export function AuthScreen({ onAuth }) {
 
       <motion.div
         className="auth-card"
+        style={{ position: 'relative' }}
         initial={{ opacity: 0, y: 32, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 24 }}
       >
+        {onClose && (
+          <button
+            onClick={onClose}
+            style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', zIndex: 10 }}
+          >
+            <X size={20} />
+          </button>
+        )}
         {/* Logo */}
         <div className="auth-logo">
           <div className="auth-logo-icon">

@@ -11,7 +11,7 @@ export function GovernanceAi() {
   useEffect(() => {
     // Fetch AI credit scores for each proposal
     proposals.forEach(p => {
-      fetch("http://localhost:8080/ai/credit-score", {
+      fetch("http://localhost:8081/ai/credit-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId: p.member, amount: p.amount })

@@ -149,7 +149,7 @@ export function MeetingSummarizer() {
     setSummaryLoading(true);
     const text = transcript.map(l => `${l.speaker}: ${l.text}`).join("\n");
 
-    fetch("http://localhost:8080/ai/summarize", {
+    fetch("http://localhost:8081/ai/summarize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript: text }),

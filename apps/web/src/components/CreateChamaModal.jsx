@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Landmark } from "lucide-react";
 import { getSession } from "../lib/auth";
 
-export function CreateChamaModal({ isOpen, onClose, onSuccess }) {
+export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,7 +42,7 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess }) {
         phone: session.user.phone || "+255700000000" // Fallback if missing
       };
 
-      const res = await fetch("http://localhost:8080/chamas", {
+      const res = await fetch("http://localhost:8081/chamas", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +157,23 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            {error && <p className="text-sm font-bold text-rose-400">{error}</p>}
+            {error && (
+              <div className="flex flex-col gap-2 rounded-lg bg-rose-500/10 p-3 border border-rose-500/20">
+                <p className="text-sm font-bold text-rose-400">{error}</p>
+                {error.includes("log in") && onLoginRequest && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onLoginRequest();
+                    }}
+                    className="mt-1 w-full rounded-lg bg-rose-500/20 py-2 text-sm font-bold text-rose-300 hover:bg-rose-500/30"
+                  >
+                    Go to Login Screen
+                  </button>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"

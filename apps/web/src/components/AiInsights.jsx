@@ -10,7 +10,7 @@ export function AiInsights() {
 
   useEffect(() => {
     // Simulate fetching from our local AI endpoints
-    fetch("http://localhost:8080/ai/health")
+    fetch("http://localhost:8081/ai/health")
       .then((res) => res.json())
       .then((data) => setHealth(data))
       .catch(() => setHealth({
@@ -21,7 +21,7 @@ export function AiInsights() {
         recommendation: "The group can safely approve up to 1,000,000 TZS in new loans."
       }));
 
-    fetch("http://localhost:8080/ai/coach", {
+    fetch("http://localhost:8081/ai/coach", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ memberName: "Benjamin" })
@@ -32,7 +32,7 @@ export function AiInsights() {
         message: "You contributed 50,000 TZS this month.\n\nAt your current rate, you could accumulate 600,000 TZS within 12 months.\n\nSuggested contribution: 65,000 TZS monthly."
       }));
 
-    fetch("http://localhost:8080/ai/fraud-check", { method: "POST" })
+    fetch("http://localhost:8081/ai/fraud-check", { method: "POST" })
       .then((res) => res.json())
       .then((data) => setFraud(data))
       .catch(() => setFraud({
