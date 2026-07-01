@@ -106,4 +106,11 @@ export async function connectWallet() {
 }
 
 /** Deep-link / redirect to Core wallet install page */
+export async function signApprovalMessage(message) {
+  const rawProvider = getCoreProvider();
+  const provider = new BrowserProvider(rawProvider);
+  const signer = await provider.getSigner();
+  return await signer.signMessage(message);
+}
+
 export const CORE_INSTALL_URL = "https://core.app/download";

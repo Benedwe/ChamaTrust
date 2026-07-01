@@ -11,6 +11,8 @@
     "dev": "npm run dev:web",
     "dev:web": "npm --workspace apps/web run dev",
     "dev:api": "npm --workspace apps/api run dev",
+    "start:web": "npm --workspace apps/web run preview",
+    "start:api": "npm --workspace apps/api run start",
     "build": "npm --workspace apps/web run build",
     "test": "npm run test:contracts",
     "test:contracts": "hardhat test",
@@ -27,6 +29,10 @@
     "hardhat": "^2.22.10"
   },
   "dependencies": {
-    "ethers": "^6.13.2"
+    "ethers": "^6.13.2",
+    "mongodb": "^7.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

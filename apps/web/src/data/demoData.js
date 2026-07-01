@@ -71,7 +71,7 @@ export const heatmap = Array.from({ length: 35 }, (_, index) => ({
   level: [1, 3, 2, 4, 2, 5, 1][index % 7]
 }));
 
-export const momoProviders = ["M-Pesa", "Airtel Money", "Tigo Pesa", "HaloPesa"];
+export const momoProviders = ["M-Pesa", "Airtel Money", "Tigo Pesa", "HaloPesa", "Pesapal"];
 
 export const agriLoans = [
   { id: "AGL-1", type: "Seed & Fertilizer", farmer: "Amina", amount: 500000, duration: "6 Months", status: "Active", progress: 60, nextPayment: "12th Jul" },

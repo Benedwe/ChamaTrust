@@ -14,7 +14,7 @@ ChamaTrust is split into four layers:
 Members interact with familiar actions:
 
 - Join a savings group.
-- Deposit with M-Pesa, Airtel Money, Tigo Pesa, or HaloPesa.
+- Deposit with M-Pesa, Airtel Money, Tigo Pesa, HaloPesa, or Pesapal.
 - Vote on a loan request.
 - Track savings, treasury activity, loan performance, and trust score.
 - Withdraw through Mobile Money after contract approval.

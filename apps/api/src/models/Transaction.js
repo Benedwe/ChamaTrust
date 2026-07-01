@@ -4,7 +4,7 @@ const transactionSchema = new mongoose.Schema(
   {
     chamaId: { type: mongoose.Schema.Types.ObjectId, ref: "Chama" },
     member: { type: String, lowercase: true },
-    provider: { type: String, enum: ["M-Pesa", "Airtel Money", "Tigo Pesa", "HaloPesa", "Avalanche"], required: true },
+    provider: { type: String, enum: ["M-Pesa", "Airtel Money", "Tigo Pesa", "HaloPesa", "Pesapal", "Avalanche"], required: true },
     direction: { type: String, enum: ["deposit", "withdrawal", "repayment", "loan"], required: true },
     amount: { type: Number, required: true },
     currency: { type: String, default: "TZS" },

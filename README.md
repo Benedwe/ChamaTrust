@@ -147,6 +147,8 @@ The frontend starts at **http://localhost:5173**. Open this URL in your browser 
 |--------------------------|-----------------------------------------------|
 | `npm run dev:web`        | Start the React frontend (Vite, port 5173)    |
 | `npm run dev:api`        | Start the Express API server (port 8080)      |
+| `npm run start:web`      | Start the built frontend for production preview |
+| `npm run start:api`      | Start the Express API server in production mode |
 | `npm run db:seed`        | Seed MongoDB with demo data (skips if exists) |
 | `npm run db:seed:force`  | Drop all data and reseed from scratch         |
 | `npm run db:status`      | Show DB connection health and document counts |
@@ -202,7 +204,12 @@ cp .env.example .env
 | `AIRTEL_CLIENT_SECRET`      | Airtel Money client secret           |
 | `TIGO_PESA_CLIENT_ID`       | Tigo Pesa client ID                  |
 | `HALOPESA_CLIENT_ID`        | HaloPesa client ID                   |
+| `HALOPESA_CLIENT_SECRET`     | HaloPesa client secret               |
+| `PESAPAL_CONSUMER_KEY`      | Pesapal merchant consumer key        |
+| `PESAPAL_CONSUMER_SECRET`   | Pesapal merchant consumer secret     |
+| `PESAPAL_CALLBACK_URL`      | Pesapal webhook/return callback URL  |
 
+> If you use Pesapal as your primary payment gateway, the legacy Mobile Money provider keys are optional and can remain blank for a minimum viable deployment.
 ---
 
 ## 📚 Documentation

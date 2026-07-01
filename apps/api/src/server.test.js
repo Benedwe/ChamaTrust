@@ -58,5 +58,5 @@ test("mobile money provider list includes supported rails", async () => {
   const names = response.body.providers.map((provider) => provider.name);
 
   assert.equal(response.status, 200);
-  assert.deepEqual(names, ["M-Pesa", "Airtel Money", "Tigo Pesa", "HaloPesa"]);
+  assert.deepEqual(names, ["M-Pesa", "Airtel Money", "Tigo Pesa", "HaloPesa", "Pesapal"]);
 });

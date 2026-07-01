@@ -8,8 +8,13 @@ ChamaTrust is designed for:
 - Airtel Money
 - Tigo Pesa
 - HaloPesa
+- Pesapal
 
 Provider-specific credentials live in environment variables and are consumed by adapter modules under `apps/api/src/services`.
+
+For Pesapal, add checkout key and secret to `.env` and configure a callback URL for webhook notifications.
+
+> Note: If you are deploying with Pesapal only, the M-Pesa/Airtel/Tigo/Halo credentials are optional and can remain empty.
 
 ## Deposit Flow
 
@@ -46,6 +51,9 @@ Production integrations should expose signed webhook endpoints:
 - `/mobile-money/webhooks/airtel`
 - `/mobile-money/webhooks/tigo-pesa`
 - `/mobile-money/webhooks/halopesa`
+- `/mobile-money/webhooks/pesapal`
+
+Pesapal webhooks should be verified with the merchant secret to confirm origin and update transaction status reliably.
 
 Each webhook should verify provider signatures, idempotency keys, amount, currency, reference, and expected account.
 

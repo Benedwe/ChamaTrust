@@ -27,7 +27,7 @@ import { FlowRail } from "./components/FlowRail";
 import { MetricCard } from "./components/MetricCard";
 import { contributors, group, momoProviders, proposals, transactions } from "./data/demoData";
 import { compactNumber, formatMoney } from "./lib/format";
-import { connectWallet, isCoreInstalled, CORE_INSTALL_URL } from "./lib/wallet";
+import { connectWallet, isCoreInstalled, CORE_INSTALL_URL, signApprovalMessage } from "./lib/wallet";
 import { AgriFinance } from "./components/AgriFinance";
 import { InvestmentPools } from "./components/InvestmentPools";
 import { AiInsights } from "./components/AiInsights";
@@ -38,6 +38,7 @@ import { CreateChamaModal } from "./components/CreateChamaModal";
 import { AuthScreen } from "./components/AuthScreen";
 import { InviteMembersModal } from "./components/InviteMembersModal";
 import { getSession, clearSession } from "./lib/auth";
+import { apiFetch } from "./lib/api";
 import "./styles/premium.css";
 
 /** Truncates a wallet address: 0x1234...abcd */
@@ -190,6 +191,14 @@ const ussdCodes = {
   "HaloPesa": "*150*88#"
 };
 
+const checkoutSteps = {
+  Pesapal: [
+    "Open the Pesapal checkout page in your browser.",
+    "Enter the amount and your mobile number to complete the payment.",
+    "Confirm payment and wait for the confirmation message."
+  ]
+};
+
 const demoWalletAddress = "0x8f23aB38Ff09D6F2a9A59b2F2e156a601E06339A";
 const demoWalletNetwork = "Avalanche Fuji Demo";
 
@@ -236,6 +245,13 @@ function App() {
   const [walletError, setWalletError] = useState("");
   const [coreInstalled, setCoreInstalled] = useState(true); // assume true until checked
   const [showUssdInstructions, setShowUssdInstructions] = useState(false);
+  const [transactionAmount, setTransactionAmount] = useState(1000);
+  const [transactionPhone, setTransactionPhone] = useState("");
+  const [transactionResult, setTransactionResult] = useState(null);
+  const [transactionError, setTransactionError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [pollReference, setPollReference] = useState(null);
+  const [reconciliationStatus, setReconciliationStatus] = useState("");
   const [isCreateChamaOpen, setIsCreateChamaOpen] = useState(false);
   const [createdChamaName, setCreatedChamaName] = useState("");
   const [inviteChamaId, setInviteChamaId] = useState(null);
@@ -247,6 +263,39 @@ function App() {
   useEffect(() => {
     setCoreInstalled(isCoreInstalled());
   }, []);
+
+  useEffect(() => {
+    if (!pollReference || !transactionResult) return;
+    if (!["initiated", "prompted"].includes(transactionResult.transaction?.status)) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const statusResponse = await apiFetch(`/transactions/${encodeURIComponent(pollReference)}`);
+        if (statusResponse?.transaction) {
+          const currentStatus = statusResponse.transaction.status;
+          if (currentStatus !== transactionResult.transaction.status) {
+            setTransactionResult((prev) => prev ? {
+              ...prev,
+              transaction: { ...prev.transaction, status: currentStatus }
+            } : prev);
+          }
+
+          if (["confirmed", "failed", "settled"].includes(currentStatus)) {
+            setReconciliationStatus(
+              currentStatus === "confirmed"
+                ? "Payment confirmed by webhook."
+                : "Payment failed or declined during reconciliation."
+            );
+            setPollReference(null);
+          }
+        }
+      } catch (err) {
+        console.warn("Reconciliation polling error", err);
+      }
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [pollReference, transactionResult]);
 
   async function handleWallet() {
     if (wallet) return; // already connected — do nothing
@@ -293,14 +342,65 @@ function App() {
     setWalletError("");
   }
 
-  const handleDepositClick = () => {
-    if (!wallet) {
-      setWalletStatus("error");
-      setWalletError("Connect Core or use the demo wallet to preview a deposit.");
+  const handleTransactionClick = async () => {
+    if (!session?.token) {
+      setTransactionError("Please log in before creating a payment request.");
+      setIsAuthOpen(true);
       return;
     }
-    if (activeFlow === "deposit") {
-      setShowUssdInstructions(true);
+
+    if (!transactionAmount || Number(transactionAmount) <= 0) {
+      setTransactionError("Enter a valid amount.");
+      return;
+    }
+
+    if (!transactionPhone || transactionPhone.length < 8) {
+      setTransactionError("Enter a valid phone number.");
+      return;
+    }
+
+    if (activeFlow === "withdraw" && !wallet) {
+      setTransactionError("Connect your Avalanche wallet before requesting withdrawal.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setTransactionError("");
+    setTransactionResult(null);
+    setReconciliationStatus("");
+
+    try {
+      const payload = { provider, phone: transactionPhone, amount: Number(transactionAmount) };
+
+      if (activeFlow === "withdraw") {
+        if (wallet?.toLowerCase() === demoWalletAddress.toLowerCase()) {
+          payload.approvalTxHash = `DEMO-APPROVAL-${Date.now()}`;
+        } else {
+          const approvalMessage = `Approve withdrawal of ${payload.amount} via ${provider} for ChamaTrust at ${new Date().toISOString()}`;
+          payload.approvalTxHash = await signApprovalMessage(approvalMessage);
+        }
+      }
+
+      const response = await apiFetch(`/mobile-money/${activeFlow === "deposit" ? "deposit" : "withdraw"}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      setTransactionResult(response);
+      setPollReference(response.transaction?.reference || null);
+      setShowUssdInstructions(activeFlow === "deposit");
+
+      if (activeFlow === "deposit" && response.mobileMoney?.paymentUrl) {
+        window.open(response.mobileMoney.paymentUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      setTransactionError(error.message || "Failed to initiate transaction.");
+      setPollReference(null);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -616,6 +716,10 @@ function App() {
                   onClick={() => {
                     setActiveFlow(flow);
                     setShowUssdInstructions(false);
+                    setTransactionResult(null);
+                    setTransactionError("");
+                    setReconciliationStatus("");
+                    setPollReference(null);
                   }}
                   className={`rounded-lg px-3 py-2 text-sm font-bold capitalize ${activeFlow === flow ? "bg-ink text-white" : "bg-white/70 text-ink"}`}
                 >
@@ -630,41 +734,112 @@ function App() {
             >
               {momoProviders.map((item) => <option key={item}>{item}</option>)}
             </select>
+            <div className="mt-4 grid gap-3">
+              <label className="text-sm font-bold text-slate-700">Amount</label>
+              <input
+                type="number"
+                value={transactionAmount}
+                onChange={(event) => setTransactionAmount(event.target.value)}
+                className="rounded-lg border border-emerald-100 bg-white px-3 py-3 text-sm font-bold outline-none"
+                placeholder="Enter amount"
+              />
+              <label className="text-sm font-bold text-slate-700">Phone number</label>
+              <input
+                type="tel"
+                value={transactionPhone}
+                onChange={(event) => setTransactionPhone(event.target.value)}
+                className="rounded-lg border border-emerald-100 bg-white px-3 py-3 text-sm font-bold outline-none"
+                placeholder="e.g. +254700000000"
+              />
+            </div>
             {!showUssdInstructions ? (
               <>
                 <FlowRail direction={activeFlow} provider={provider} />
                 <button 
-                  onClick={activeFlow === "deposit" ? handleDepositClick : undefined}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-canopy px-4 py-3 font-extrabold text-white">
+                  onClick={handleTransactionClick}
+                  disabled={isProcessing}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-canopy px-4 py-3 font-extrabold text-white disabled:opacity-70">
                   {activeFlow === "deposit" ? <ArrowDownToLine size={18} /> : <Banknote size={18} />}
-                  {activeFlow === "deposit" ? "Deposit funds" : "Request withdrawal"}
+                  {isProcessing ? `${activeFlow === "deposit" ? "Starting deposit…" : "Requesting withdrawal…"}` : activeFlow === "deposit" ? "Deposit funds" : "Request withdrawal"}
                 </button>
+                {transactionError && (
+                  <p className="mt-3 text-sm font-semibold text-rose-600">{transactionError}</p>
+                )}
+                {transactionResult && (
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-slate-900">
+                    <p className="font-bold">
+                      {activeFlow === "deposit" ? "Deposit request created." : "Withdrawal request created."}
+                    </p>
+                    <p className="text-sm">Provider: {transactionResult.transaction.provider}</p>
+                    <p className="text-sm">Reference: {transactionResult.transaction.reference}</p>
+                    <p className="text-sm">Status: {transactionResult.transaction.status}</p>
+                    {transactionResult.mobileMoney?.paymentUrl && activeFlow === "deposit" && (
+                      <a
+                        href={transactionResult.mobileMoney.paymentUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="mt-2 inline-flex rounded-lg bg-mint px-3 py-2 text-sm font-bold text-ink"
+                      >
+                        Continue to Pesapal checkout
+                      </a>
+                    )}
+                    {activeFlow === "withdraw" && transactionResult.mobileMoney?.message && (
+                      <p className="mt-2 text-sm text-slate-700">{transactionResult.mobileMoney.message}</p>
+                    )}
+                    {reconciliationStatus && (
+                      <p className="mt-3 text-sm font-semibold text-slate-700">{reconciliationStatus}</p>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <div className="mt-4 rounded-lg border border-emerald-100 bg-white/70 p-4 text-ink shadow-sm">
                 <h3 className="mb-2 text-lg font-black text-canopy">USSD Instructions</h3>
-                <p className="mb-3 text-sm font-semibold">
-                  Dialing <strong className="text-mint">{ussdCodes[provider]}</strong> on your phone...
-                </p>
-                <ol className="mb-4 space-y-2 pl-5 text-sm font-medium text-slate-700 list-decimal">
-                  {ussdSteps[provider].map((step, idx) => (
-                    <li key={idx}>{step}</li>
-                  ))}
-                </ol>
-                <div className="flex gap-2">
-                  <a 
-                    href={`tel:${ussdCodes[provider].replace(/#/g, "%23")}`} 
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-mint px-4 py-3 font-extrabold text-ink"
-                  >
-                    Dial Now
-                  </a>
-                  <button 
-                    onClick={() => setShowUssdInstructions(false)}
-                    className="flex-1 rounded-lg bg-slate-200 px-4 py-3 font-extrabold text-slate-700"
-                  >
-                    Close
-                  </button>
-                </div>
+                {provider === "Pesapal" ? (
+                  <>
+                    <p className="mb-3 text-sm font-semibold">
+                      Pesapal uses a secure online checkout instead of USSD.
+                    </p>
+                    <ol className="mb-4 space-y-2 pl-5 text-sm font-medium text-slate-700 list-decimal">
+                      {checkoutSteps.Pesapal.map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowUssdInstructions(false)}
+                        className="flex-1 rounded-lg bg-slate-200 px-4 py-3 font-extrabold text-slate-700"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-3 text-sm font-semibold">
+                      Dialing <strong className="text-mint">{ussdCodes[provider]}</strong> on your phone...
+                    </p>
+                    <ol className="mb-4 space-y-2 pl-5 text-sm font-medium text-slate-700 list-decimal">
+                      {ussdSteps[provider].map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                    <div className="flex gap-2">
+                      <a
+                        href={`tel:${ussdCodes[provider].replace(/#/g, "%23")}`}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-mint px-4 py-3 font-extrabold text-ink"
+                      >
+                        Dial Now
+                      </a>
+                      <button
+                        onClick={() => setShowUssdInstructions(false)}
+                        className="flex-1 rounded-lg bg-slate-200 px-4 py-3 font-extrabold text-slate-700"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </Card>
