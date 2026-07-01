@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Landmark, ShieldCheck, Sparkles, Users, Eye, EyeOff, AlertCircle, X } from "lucide-react";
 import { register, login, registerDemo } from "../lib/auth";
+import { checkApiHealth } from "../lib/api";
 import "../styles/auth.css";
 
 const FEATURES = [
@@ -199,7 +200,12 @@ function SignInForm({ onSuccess }) {
 
 /* ── Main AuthScreen ──────────────────────────────────────── */
 export function AuthScreen({ onAuth, onClose }) {
-  const [tab, setTab] = useState("signup"); // "signup" | "signin"
+  const [tab, setTab] = useState("signin");
+  const [apiOnline, setApiOnline] = useState(null);
+
+  useEffect(() => {
+    checkApiHealth().then(setApiOnline);
+  }, []);
 
   function handleSuccess(token, user) {
     onAuth(token, user);
@@ -236,6 +242,11 @@ export function AuthScreen({ onAuth, onClose }) {
           <div className="auth-logo-text">
             <div className="auth-logo-name">ChamaTrust</div>
             <div className="auth-logo-tag">Avalanche-powered community finance</div>
+            {apiOnline !== null && (
+              <div style={{ fontSize: "11px", marginTop: 4, color: apiOnline ? "#00d26a" : "#fbbf24" }}>
+                {apiOnline ? "● API connected" : "● API offline — demo mode available"}
+              </div>
+            )}
           </div>
         </div>
 

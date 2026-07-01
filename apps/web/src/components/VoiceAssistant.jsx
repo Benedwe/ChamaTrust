@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, X, MessageCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { apiFetch } from "../lib/api";
 import "../styles/premium.css";
 
 export function VoiceAssistant() {
@@ -30,9 +31,8 @@ export function VoiceAssistant() {
       
       // Simulate AI processing and responding
       setTimeout(() => {
-        fetch("http://localhost:8081/ai/voice", {
+        apiFetch("/ai/voice", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: "Nimechangia kiasi gani mwezi huu?" })
         })
         .then(res => res.json())

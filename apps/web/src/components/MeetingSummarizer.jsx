@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { apiFetch } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Video, VideoOff, Mic, MicOff, MonitorUp, PhoneOff,
@@ -149,9 +150,8 @@ export function MeetingSummarizer() {
     setSummaryLoading(true);
     const text = transcript.map(l => `${l.speaker}: ${l.text}`).join("\n");
 
-    fetch("http://localhost:8081/ai/summarize", {
+    apiFetch("/ai/summarize", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript: text }),
     })
       .then(r => r.json())

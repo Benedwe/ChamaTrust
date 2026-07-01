@@ -18,7 +18,9 @@ import {
   Vote,
   WalletCards,
   X,
-  XCircle
+  XCircle,
+  Sparkles,
+  LogIn
 } from "lucide-react";
 import { Card } from "./components/Card";
 import { ContributionHeatmap, LoanPerformanceChart, SavingsChart, TreasuryPie } from "./components/DashboardCharts";
@@ -26,7 +28,13 @@ import { FlowRail } from "./components/FlowRail";
 import { MetricCard } from "./components/MetricCard";
 import { contributors, group, momoProviders, proposals, transactions } from "./data/demoData";
 import { compactNumber, formatMoney } from "./lib/format";
-import { connectWallet, isCoreInstalled, CORE_INSTALL_URL, signApprovalMessage } from "./lib/wallet";
+import {
+  connectWallet,
+  getAvailableWallets,
+  isAnyWalletInstalled,
+  signApprovalMessage
+} from "./lib/wallet";
+import { WalletPicker } from "./components/WalletPicker";
 import { AgriFinance } from "./components/AgriFinance";
 import { InvestmentPools } from "./components/InvestmentPools";
 import { AiInsights } from "./components/AiInsights";
@@ -36,7 +44,7 @@ import { VoiceAssistant } from "./components/VoiceAssistant";
 import { CreateChamaModal } from "./components/CreateChamaModal";
 import { AuthScreen } from "./components/AuthScreen";
 import { InviteMembersModal } from "./components/InviteMembersModal";
-import { getSession, clearSession } from "./lib/auth";
+import { getSession, clearSession, linkWallet } from "./lib/auth";
 import { apiFetch } from "./lib/api";
 import "./styles/premium.css";
 
@@ -101,8 +109,8 @@ function WalletToast({ status, address, error, onDismiss }) {
           )}
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 700, fontSize: "14px", color: "#fff", margin: 0 }}>
-              {status === "connecting" && "Connecting Core wallet…"}
-              {status === "connected" && "Core wallet connected! ✓"}
+              {status === "connecting" && "Connecting wallet…"}
+              {status === "connected" && "Wallet connected! ✓"}
               {status === "error" && "Connection failed"}
             </p>
             {status === "connected" && address && (
@@ -239,7 +247,9 @@ function App() {
   const [walletNetwork, setWalletNetwork] = useState(null); // e.g. "Avalanche Fuji C-Chain"
   const [walletStatus, setWalletStatus] = useState("idle"); // idle | connecting | connected | error
   const [walletError, setWalletError] = useState("");
-  const [coreInstalled, setCoreInstalled] = useState(true); // assume true until checked
+  const [walletInstalled, setWalletInstalled] = useState(true);
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
+  const [connectedWalletName, setConnectedWalletName] = useState(null);
   const [showUssdInstructions, setShowUssdInstructions] = useState(false);
   const [transactionAmount, setTransactionAmount] = useState(1000);
   const [transactionPhone, setTransactionPhone] = useState("");
@@ -255,9 +265,8 @@ function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const monthlyPercent = useMemo(() => Math.round((group.balance / group.contributionTarget) * 100), []);
 
-  // Detect Core wallet on mount
   useEffect(() => {
-    setCoreInstalled(isCoreInstalled());
+    setWalletInstalled(isAnyWalletInstalled());
   }, []);
 
   useEffect(() => {
@@ -293,37 +302,66 @@ function App() {
     return () => clearInterval(interval);
   }, [pollReference, transactionResult]);
 
-  async function handleWallet() {
-    if (wallet) return; // already connected — do nothing
-
-    // If Core isn't installed, send user to install page
-    if (!isCoreInstalled()) {
-      window.open(CORE_INSTALL_URL, "_blank", "noopener,noreferrer");
-      setCoreInstalled(false);
-      return;
-    }
-
+  async function connectSelectedWallet(walletId) {
+    setShowWalletPicker(false);
     setWalletStatus("connecting");
     setWalletError("");
     try {
-      const session = await connectWallet();
-      if (!session?.address) throw new Error("No address returned from Core wallet.");
-      setWallet(session.address);
-      setWalletNetwork(session.network);
+      const result = await connectWallet(walletId);
+      if (!result?.address) throw new Error("No address returned from wallet.");
+      setWallet(result.address);
+      setWalletNetwork(result.network);
+      setConnectedWalletName(result.walletName);
       setWalletStatus("connected");
-    } catch (err) {
-      let msg = err?.message || "Could not connect Core wallet. Please try again.";
-      // Friendly message for the CORE_NOT_INSTALLED sentinel
-      if (msg === "CORE_NOT_INSTALLED") {
-        msg = "Avalanche Core wallet not detected. Please install Core to continue.";
-        setCoreInstalled(false);
+
+      const currentSession = getSession();
+      if (currentSession?.token && !currentSession.user?.walletAddress) {
+        try {
+          await linkWallet(currentSession.token, {
+            address: result.address,
+            message: result.message,
+            signature: result.signature,
+          });
+          setSession(getSession());
+        } catch {
+          // Wallet connected locally even if backend link fails
+        }
       }
-      // User rejected the request
-      if (err?.code === 4001) msg = "Connection rejected. Please approve the request in Core wallet.";
+    } catch (err) {
+      let msg = err?.message || "Could not connect wallet. Please try again.";
+      if (msg === "NO_WALLET_INSTALLED") {
+        msg = "No Web3 wallet detected. Install MetaMask or Core to continue.";
+        setWalletInstalled(false);
+      }
+      if (msg === "MULTIPLE_WALLETS") {
+        setShowWalletPicker(true);
+        setWalletStatus("idle");
+        return;
+      }
+      if (err?.code === 4001) msg = "Connection rejected. Please approve the request in your wallet.";
       setWalletError(msg);
       setWalletStatus("error");
       setWallet(null);
     }
+  }
+
+  function handleWallet() {
+    if (wallet) return;
+
+    if (!isAnyWalletInstalled()) {
+      setWalletInstalled(false);
+      setWalletStatus("error");
+      setWalletError("No Web3 wallet found. Install MetaMask or Core, then try again.");
+      return;
+    }
+
+    const available = getAvailableWallets();
+    if (available.length > 1) {
+      setShowWalletPicker(true);
+      return;
+    }
+
+    connectSelectedWallet(available[0]?.id);
   }
 
   function dismissToast() {
@@ -423,8 +461,18 @@ function App() {
         onDismiss={() => setCreatedChamaName("")} 
       />
 
+      <AnimatePresence>
+        {showWalletPicker && (
+          <WalletPicker
+            wallets={getAvailableWallets()}
+            onSelect={connectSelectedWallet}
+            onClose={() => setShowWalletPicker(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 phone-safe md:px-6 lg:px-8">
-        <header className="sticky top-0 z-20 -mx-4 border-b border-white/50 bg-paper/75 px-4 py-3 backdrop-blur-xl md:static md:mx-0 md:border-none md:bg-transparent md:px-0 text-ink">
+        <header className="sticky top-0 z-20 -mx-4 border-b border-ink/10 bg-paper/95 px-4 py-3 backdrop-blur-xl md:static md:mx-0 md:border-none md:bg-transparent md:px-0 text-ink">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-lg bg-ink text-mint shadow-lg">
@@ -442,16 +490,17 @@ function App() {
               {session ? (
                 <button
                   onClick={() => { clearSession(); setSession(null); }}
-                  className="flex min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm hover:bg-white/10"
+                  className="flex min-h-10 items-center gap-2 rounded-lg border border-ink/15 bg-ink/5 px-3 text-sm font-bold text-ink shadow-sm hover:bg-ink/10 md:border-white/20 md:bg-white/5 md:text-white md:hover:bg-white/10"
                 >
                   Log Out ({session.user.fullName.split(' ')[0]})
                 </button>
               ) : (
                 <button
                   onClick={() => setIsAuthOpen(true)}
-                  className="flex min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm hover:bg-white/10"
+                  className="flex min-h-10 items-center gap-2 rounded-lg border border-ink/15 bg-ink px-3 text-sm font-bold text-white shadow-sm hover:bg-ink/90 md:border-mint/30 md:bg-mint md:text-ink md:hover:bg-mint/90"
                 >
-                  Get Started
+                  <LogIn size={15} />
+                  Login
                 </button>
               )}
               <button
@@ -460,24 +509,24 @@ function App() {
                 disabled={walletStatus === "connecting" || !!wallet}
                 title={
                   wallet
-                    ? `Connected on ${walletNetwork}: ${wallet}`
-                    : !coreInstalled
-                    ? "Install Avalanche Core wallet"
-                    : "Connect Avalanche Core wallet"
+                    ? `Connected via ${connectedWalletName || "wallet"} on ${walletNetwork}: ${wallet}`
+                    : !walletInstalled
+                    ? "Install a Web3 wallet (MetaMask, Core, etc.)"
+                    : "Connect your Web3 wallet"
                 }
                 className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-white shadow-lg"
                 style={{
                   background: wallet
                     ? "linear-gradient(135deg, #003d1f 0%, #00522a 100%)"
-                    : !coreInstalled
-                    ? "linear-gradient(135deg, #e84142 0%, #b91c1c 100%)"
+                    : !walletInstalled
+                    ? "linear-gradient(135deg, #475569 0%, #334155 100%)"
                     : walletStatus === "error"
                     ? "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)"
-                    : "linear-gradient(135deg, #e84142 0%, #c0392b 100%)",  /* Avalanche red */
+                    : "linear-gradient(135deg, #e84142 0%, #c0392b 100%)",
                   border: wallet
                     ? "1px solid rgba(0,210,110,0.45)"
-                    : !coreInstalled
-                    ? "1px solid rgba(232,65,66,0.5)"
+                    : !walletInstalled
+                    ? "1px solid rgba(100,116,139,0.5)"
                     : walletStatus === "error"
                     ? "1px solid rgba(239,68,68,0.4)"
                     : "1px solid rgba(232,65,66,0.4)",
@@ -508,9 +557,9 @@ function App() {
                     ? "Connecting…"
                     : wallet
                     ? truncateAddress(wallet)
-                    : !coreInstalled
-                    ? "Install Core"
-                    : "Connect Core"}
+                    : !walletInstalled
+                    ? "Install Wallet"
+                    : "Connect Wallet"}
                 </span>
               </button>
               </div>
@@ -606,6 +655,25 @@ function App() {
             <p className="mt-4 max-w-2xl text-sm leading-6 text-emerald-50 md:text-base">
               Members use familiar Mobile Money flows while treasury actions settle transparently through Avalanche.
             </p>
+            {!session && (
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  onClick={() => setIsAuthOpen(true)}
+                  className="flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-extrabold text-ink shadow-lg hover:bg-mint/90"
+                >
+                  <LogIn size={16} />
+                  Login to ChamaTrust
+                </button>
+                <button
+                  onClick={handleWallet}
+                  disabled={walletStatus === "connecting" || !!wallet}
+                  className="flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-5 py-3 text-sm font-extrabold text-white hover:bg-white/15"
+                >
+                  <WalletCards size={16} />
+                  {wallet ? truncateAddress(wallet) : "Connect Wallet"}
+                </button>
+              </div>
+            )}
             <div className="mt-6 grid grid-cols-4 gap-2">
               {["Join", "Deposit", "Vote"].map((action) => (
                 <button key={action} className="rounded-lg bg-white px-3 py-3 text-sm font-extrabold text-ink">

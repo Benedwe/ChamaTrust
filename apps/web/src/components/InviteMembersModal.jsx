@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Users, CheckCircle2 } from "lucide-react";
 import { getSession } from "../lib/auth";
+import { apiFetch } from "../lib/api";
 
 export function InviteMembersModal({ chamaId, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -27,20 +28,13 @@ export function InviteMembersModal({ chamaId, onClose }) {
     }
 
     try {
-      const res = await fetch(`http://localhost:8081/chamas/${chamaId}/invite`, {
+      await apiFetch(`/chamas/${chamaId}/invite`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.token}`
-        },
         body: JSON.stringify({
           walletAddress: formData.walletAddress,
           phone: formData.phone
-        })
+        }),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to invite member");
 
       setSuccessMsg(`Successfully invited member!`);
       setFormData({ walletAddress: "", phone: "" });

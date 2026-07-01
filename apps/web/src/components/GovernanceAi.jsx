@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Vote, ChevronRight, ShieldCheck, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 import { proposals } from "../data/demoData";
 import { formatMoney } from "../lib/format";
 import "../styles/premium.css";
@@ -11,9 +12,8 @@ export function GovernanceAi() {
   useEffect(() => {
     // Fetch AI credit scores for each proposal
     proposals.forEach(p => {
-      fetch("http://localhost:8081/ai/credit-score", {
+      apiFetch("/ai/credit-score", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId: p.member, amount: p.amount })
       })
       .then(res => res.json())

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Landmark } from "lucide-react";
 import { getSession } from "../lib/auth";
+import { apiFetch } from "../lib/api";
 
 export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest }) {
   const [loading, setLoading] = useState(false);
@@ -42,17 +43,10 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest })
         phone: session.user.phone || "+255700000000" // Fallback if missing
       };
 
-      const res = await fetch("http://localhost:8081/chamas", {
+      const data = await apiFetch("/chamas", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.token}`
-        },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create Chama");
 
       onSuccess(data.chama);
     } catch (err) {

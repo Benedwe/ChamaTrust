@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { BrainCircuit, Activity, TrendingUp, AlertTriangle, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 import "../styles/premium.css";
 
 export function AiInsights() {
@@ -9,9 +10,7 @@ export function AiInsights() {
   const [fraud, setFraud] = useState(null);
 
   useEffect(() => {
-    // Simulate fetching from our local AI endpoints
-    fetch("http://localhost:8081/ai/health")
-      .then((res) => res.json())
+    apiFetch("/ai/health")
       .then((data) => setHealth(data))
       .catch(() => setHealth({
         treasuryHealth: "Strong",
@@ -21,19 +20,16 @@ export function AiInsights() {
         recommendation: "The group can safely approve up to 1,000,000 TZS in new loans."
       }));
 
-    fetch("http://localhost:8081/ai/coach", {
+    apiFetch("/ai/coach", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ memberName: "Benjamin" })
     })
-      .then((res) => res.json())
       .then((data) => setCoach(data))
       .catch(() => setCoach({
         message: "You contributed 50,000 TZS this month.\n\nAt your current rate, you could accumulate 600,000 TZS within 12 months.\n\nSuggested contribution: 65,000 TZS monthly."
       }));
 
-    fetch("http://localhost:8081/ai/fraud-check", { method: "POST" })
-      .then((res) => res.json())
+    apiFetch("/ai/fraud-check", { method: "POST" })
       .then((data) => setFraud(data))
       .catch(() => setFraud({
         alert: "Member has submitted 4 loan requests within 14 days.",
