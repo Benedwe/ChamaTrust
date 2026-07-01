@@ -13,7 +13,6 @@ import {
   Loader2,
   LockKeyhole,
   ShieldCheck,
-  Sparkles,
   Trophy,
   Users,
   Vote,
@@ -199,9 +198,6 @@ const checkoutSteps = {
   ]
 };
 
-const demoWalletAddress = "0x8f23aB38Ff09D6F2a9A59b2F2e156a601E06339A";
-const demoWalletNetwork = "Avalanche Fuji Demo";
-
 const ussdSteps = {
   "M-Pesa": [
     "Dial *150*00#",
@@ -335,13 +331,6 @@ function App() {
     setWalletError("");
   }
 
-  function handleDemoWallet() {
-    setWallet(demoWalletAddress);
-    setWalletNetwork(demoWalletNetwork);
-    setWalletStatus("connected");
-    setWalletError("");
-  }
-
   const handleTransactionClick = async () => {
     if (!session?.token) {
       setTransactionError("Please log in before creating a payment request.");
@@ -373,12 +362,8 @@ function App() {
       const payload = { provider, phone: transactionPhone, amount: Number(transactionAmount) };
 
       if (activeFlow === "withdraw") {
-        if (wallet?.toLowerCase() === demoWalletAddress.toLowerCase()) {
-          payload.approvalTxHash = `DEMO-APPROVAL-${Date.now()}`;
-        } else {
-          const approvalMessage = `Approve withdrawal of ${payload.amount} via ${provider} for ChamaTrust at ${new Date().toISOString()}`;
-          payload.approvalTxHash = await signApprovalMessage(approvalMessage);
-        }
+        const approvalMessage = `Approve withdrawal of ${payload.amount} via ${provider} for ChamaTrust at ${new Date().toISOString()}`;
+        payload.approvalTxHash = await signApprovalMessage(approvalMessage);
       }
 
       const response = await apiFetch(`/mobile-money/${activeFlow === "deposit" ? "deposit" : "withdraw"}`, {
@@ -457,26 +442,16 @@ function App() {
               {session ? (
                 <button
                   onClick={() => { clearSession(); setSession(null); }}
-                  className="hidden min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm sm:flex hover:bg-white/10"
+                  className="flex min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm hover:bg-white/10"
                 >
                   Log Out ({session.user.fullName.split(' ')[0]})
                 </button>
               ) : (
                 <button
                   onClick={() => setIsAuthOpen(true)}
-                  className="hidden min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm sm:flex hover:bg-white/10"
+                  className="flex min-h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm font-bold text-white shadow-sm hover:bg-white/10"
                 >
-                  Log In
-                </button>
-              )}
-              {!wallet && (
-                <button
-                  onClick={handleDemoWallet}
-                  className="hidden min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-ink shadow-sm sm:flex"
-                  title="Use a simulated Fuji wallet for demo mode"
-                >
-                  <Sparkles size={15} />
-                  Demo wallet
+                  Get Started
                 </button>
               )}
               <button
