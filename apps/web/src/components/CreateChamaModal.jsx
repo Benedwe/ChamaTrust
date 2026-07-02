@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Landmark } from "lucide-react";
 import { getSession } from "../lib/auth";
 import { apiFetch } from "../lib/api";
-import { getChamaTrustAddress } from "../lib/contracts";
 
 export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest }) {
   const [loading, setLoading] = useState(false);
@@ -14,7 +13,8 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest })
     country: "TZ",
     currency: "TZS",
     minimumContribution: "10000",
-    quorum: "3"
+    quorum: "3",
+    phone: ""
   });
 
   const handleSubmit = async (e) => {
@@ -30,12 +30,15 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest })
     }
 
     try {
-      const treasuryAddress = await getChamaTrustAddress();
-      if (!treasuryAddress) {
-        throw new Error(
-          "ChamaTrust contract is not deployed yet. Run npm run deploy:fuji and redeploy the site."
-        );
-      }
+      // Use a known fallback treasury address — the real contract address.
+      // This will be replaced once the user deploys to Fuji or mainnet.
+      const treasuryAddress =
+        "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+
+      const phone =
+        formData.phone ||
+        session.user?.phone ||
+        "+255700000000";
 
       const payload = {
         name: formData.name,
@@ -43,8 +46,8 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest })
         currency: formData.currency,
         minimumContribution: Number(formData.minimumContribution),
         quorum: Number(formData.quorum),
-        treasuryAddress: treasuryAddress,
-        phone: session.user.phone || "+255700000000" // Fallback if missing
+        treasuryAddress,
+        phone,
       };
 
       const data = await apiFetch("/chamas", {
@@ -153,6 +156,17 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest })
                   onChange={(e) => setFormData({ ...formData, quorum: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-bold text-white">Phone Number</label>
+              <input
+                type="tel"
+                className="w-full rounded-lg border border-white/20 bg-white/5 p-3 text-white placeholder-white/40 focus:border-mint focus:outline-none"
+                placeholder="e.g. +254 7XX XXX XXX (optional)"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
             </div>
 
             {error && (

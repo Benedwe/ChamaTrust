@@ -77,7 +77,7 @@ export function mockDbMiddleware(req, res, next) {
           _id: "60b9f1a2c3d4e5f6a7b8c9d0",
           ...req.body,
           members: [
-            { walletAddress: req.user?.walletAddress || req.user?.sub || "demo-user-id", phone: req.body.phone || "+255700000000", role: "admin", trustScore: 80 }
+            { walletAddress: req.user?.walletAddress || null, userId: req.user?.sub || "demo-user-id", phone: req.body.phone || "+255700000000", role: "admin", trustScore: 80 }
           ]
         }
       });

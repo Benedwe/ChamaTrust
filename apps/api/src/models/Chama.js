@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const memberSchema = new mongoose.Schema(
   {
-    walletAddress: { type: String, required: true, lowercase: true },
+    walletAddress: { type: String, lowercase: true, default: null },
+    userId: { type: String, default: null },
     phone: { type: String, required: true },
     role: { type: String, enum: ["admin", "member", "auditor"], default: "member" },
     trustScore: { type: Number, default: 50 },
