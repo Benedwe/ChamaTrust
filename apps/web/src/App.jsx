@@ -277,7 +277,7 @@ function App() {
   useEffect(() => {
     setWalletInstalled(isAnyWalletInstalled());
     
-    // Auto-reconnect previously connected wallet
+    // Auto-reconnect previously connected wallet (browser session)
     reconnectWallet().then((result) => {
       if (result?.address) {
         setWallet(result.address);
@@ -287,6 +287,24 @@ function App() {
       }
     });
   }, []);
+
+  // When the user logs in and their account has a linked wallet address,
+  // silently try to reconnect that wallet from the browser.
+  useEffect(() => {
+    if (!session?.user?.walletAddress || wallet) return;
+
+    reconnectWallet().then((result) => {
+      if (result?.address &&
+          result.address.toLowerCase() === session.user.walletAddress.toLowerCase()) {
+        setWallet(result.address);
+        setWalletNetwork(result.network);
+        setConnectedWalletName(result.walletName);
+        setWalletStatus("connected");
+      }
+    }).catch(() => {
+      // Reconnect failed silently — user can manually connect
+    });
+  }, [session?.user?.walletAddress]);
 
   // Fetch live dashboard data
   useEffect(() => {
@@ -408,6 +426,12 @@ function App() {
       return;
     }
 
+    // Require wallet for both deposit and withdrawal
+    if (!wallet) {
+      setTransactionError("Connect your wallet first to deposit or withdraw funds.");
+      return;
+    }
+
     if (!transactionAmount || Number(transactionAmount) <= 0) {
       setTransactionError("Enter a valid amount.");
       return;
@@ -415,11 +439,6 @@ function App() {
 
     if (!transactionPhone || transactionPhone.length < 8) {
       setTransactionError("Enter a valid phone number.");
-      return;
-    }
-
-    if (activeFlow === "withdraw" && !wallet) {
-      setTransactionError("Connect your Avalanche wallet before requesting withdrawal.");
       return;
     }
 
@@ -873,6 +892,8 @@ function App() {
             {!showUssdInstructions ? (
               <>
                 <FlowRail direction={activeFlow} provider={provider} />
+
+                {/* Step 1: Must be logged in */}
                 {!session && (
                   <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3 text-center">
                     <p className="text-xs font-bold text-cyan-300">Log in to send real transactions</p>
@@ -884,10 +905,24 @@ function App() {
                     </button>
                   </div>
                 )}
+
+                {/* Step 2: Logged in but no wallet */}
+                {session && !wallet && (
+                  <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+                    <p className="text-xs font-bold text-amber-300">Connect your wallet to deposit or withdraw</p>
+                    <button
+                      onClick={() => setShowWalletPicker(true)}
+                      className="mt-2 rounded-lg bg-amber-400 px-4 py-2 text-xs font-extrabold text-ink hover:bg-amber-300"
+                    >
+                      Connect Wallet
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={handleTransactionClick}
-                  disabled={isProcessing}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-canopy px-4 py-3 font-extrabold text-white disabled:opacity-70">
+                  disabled={isProcessing || !session || !wallet}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-canopy px-4 py-3 font-extrabold text-white disabled:opacity-40 disabled:cursor-not-allowed">
                   {activeFlow === "deposit" ? <ArrowDownToLine size={18} /> : <Banknote size={18} />}
                   {isProcessing ? `${activeFlow === "deposit" ? "Starting deposit…" : "Requesting withdrawal…"}` : activeFlow === "deposit" ? "Deposit funds" : "Request withdrawal"}
                 </button>
