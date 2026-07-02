@@ -5,9 +5,13 @@ import { connectDB } from "./db.js";
 const port = process.env.PORT || 8080;
 
 async function start() {
-  await connectDB();
-  if (process.env.MONGODB_URI) {
-    console.log("ChamaTrust API connected to MongoDB");
+  try {
+    await connectDB();
+    if (process.env.MONGODB_URI) {
+      console.log("ChamaTrust API connected to MongoDB");
+    }
+  } catch (error) {
+    console.warn("Failed to connect to MongoDB, proceeding with mock database:", error.message);
   }
 
   app.listen(port, () => {

@@ -704,11 +704,11 @@ function App() {
               Members use familiar Mobile Money flows while treasury actions settle transparently through Avalanche.
             </p>
             {!session ? (
-              <div className="mt-5 flex flex-wrap gap-3">
+              <div className="mt-5 flex flex-col sm:flex-row flex-wrap gap-3">
                 <button
                   id="hero-login-btn"
                   onClick={() => setIsAuthOpen(true)}
-                  className="flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-extrabold text-ink shadow-lg hover:bg-mint/90"
+                  className="flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-extrabold text-ink shadow-lg hover:bg-mint/90"
                   style={{ boxShadow: "0 0 24px rgba(0,210,110,0.4)" }}
                 >
                   <LogIn size={16} />
@@ -717,7 +717,7 @@ function App() {
                 <button
                   onClick={handleWallet}
                   disabled={walletStatus === "connecting"}
-                  className="flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-5 py-3 text-sm font-extrabold text-white hover:bg-white/15"
+                  className="flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-5 py-3 text-sm font-extrabold text-white hover:bg-white/15"
                 >
                   <WalletCards size={16} />
                   {wallet ? truncateAddress(wallet) : "Connect Wallet"}
@@ -729,7 +729,7 @@ function App() {
                 <span className="text-sm font-bold text-emerald-200">Signed in as {session.user?.fullName?.split(" ")[0]}</span>
               </div>
             )}
-            <div className="mt-6 grid grid-cols-4 gap-2">
+            <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 id="hero-join-btn"
                 onClick={() => { if (!session) { setIsAuthOpen(true); } else { setIsJoinChamaOpen(true); } }}
@@ -1110,12 +1110,12 @@ function App() {
             </div>
             <div className="mt-3 overflow-hidden rounded-lg bg-white/70">
               {transactions.map((transaction) => (
-                <div key={transaction.id} className="grid grid-cols-[1fr_auto] gap-3 border-b border-emerald-50 p-4 last:border-0 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
+                <div key={transaction.id} className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-emerald-50 p-4 last:border-0 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
                   <p className="font-mono text-xs font-bold text-slate-600">{transaction.id}</p>
                   <p className="hidden text-sm font-semibold md:block">{transaction.rail}</p>
                   <p className="hidden text-sm font-semibold md:block">{transaction.type}</p>
-                  <p className="hidden text-sm font-black md:block">{formatMoney(transaction.amount)}</p>
-                  <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-extrabold text-canopy">{transaction.status}</span>
+                  <p className="text-sm font-black text-right md:text-left">{formatMoney(transaction.amount)}</p>
+                  <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-extrabold text-canopy text-center">{transaction.status}</span>
                 </div>
               ))}
             </div>

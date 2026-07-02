@@ -166,6 +166,12 @@ body {
   margin-bottom: 24px;
   overflow-x: auto;
   color: var(--text-primary);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.premium-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .premium-tab {
