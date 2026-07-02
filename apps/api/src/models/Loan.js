@@ -17,7 +17,8 @@ const loanSchema = new mongoose.Schema(
     borrower: { type: String, required: true, lowercase: true },
     amount: { type: Number, required: true },
     purpose: { type: String, required: true },
-    riskLevel: { type: String, enum: ["low", "medium", "high"], default: "medium" },
+    // Title-case to match what analyzeLoanRisk() returns: "Low" | "Medium" | "High"
+    riskLevel: { type: String, enum: ["Low", "Medium", "High"], default: "Medium" },
     proposalId: { type: String, required: true },
     status: { type: String, enum: ["pending", "approved", "rejected", "disbursed", "repaid", "defaulted"], default: "pending" },
     votes: [voteSchema],

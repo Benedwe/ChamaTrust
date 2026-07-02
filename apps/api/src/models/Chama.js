@@ -16,6 +16,7 @@ const chamaSchema = new mongoose.Schema(
     name: { type: String, required: true },
     country: { type: String, default: "TZ" },
     currency: { type: String, default: "TZS" },
+    phone: { type: String, default: "" },
     treasuryAddress: { type: String, required: true },
     contractAddress: { type: String },
     quorum: { type: Number, default: 3 },

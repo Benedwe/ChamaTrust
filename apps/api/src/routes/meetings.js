@@ -47,25 +47,40 @@ function serializeMeeting(meeting) {
   };
 }
 
-router.get("/", async (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 10, 50);
-  const meetings = await Meeting.find().sort({ scheduledFor: -1 }).limit(limit);
-  res.json({ meetings: meetings.map(serializeMeeting), source: "mongodb" });
-});
-
-router.get("/latest", async (req, res) => {
-  const meeting = await Meeting.findOne().sort({ scheduledFor: -1 });
-  if (!meeting) {
-    return res.status(404).json({ error: "No meetings found" });
+router.get("/", async (req, res, next) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const meetings = await Meeting.find().sort({ scheduledFor: -1 }).limit(limit);
+    res.json({ meetings: meetings.map(serializeMeeting), source: "mongodb" });
+  } catch (err) {
+    next(err);
   }
-
-  return res.json({ meeting: serializeMeeting(meeting), source: "mongodb" });
 });
 
-router.post("/", async (req, res) => {
-  const input = createMeetingSchema.parse(req.body);
-  const meeting = await Meeting.create({ ...input, status: "completed" });
-  res.status(201).json({ meeting: serializeMeeting(meeting), source: "mongodb" });
+router.get("/latest", async (req, res, next) => {
+  try {
+    const meeting = await Meeting.findOne().sort({ scheduledFor: -1 });
+    if (!meeting) {
+      return res.status(404).json({ error: "No meetings found" });
+    }
+
+    return res.json({ meeting: serializeMeeting(meeting), source: "mongodb" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/", async (req, res, next) => {
+  try {
+    const input = createMeetingSchema.parse(req.body);
+    const meeting = await Meeting.create({ ...input, status: "completed" });
+    res.status(201).json({ meeting: serializeMeeting(meeting), source: "mongodb" });
+  } catch (err) {
+    if (err?.name === "ZodError") {
+      return res.status(400).json({ error: err.errors[0]?.message || "Validation failed" });
+    }
+    next(err);
+  }
 });
 
 export default router;
