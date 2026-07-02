@@ -21,9 +21,10 @@ router.get("/", async (req, res) => {
 
 router.post("/", requireAuth, async (req, res) => {
   const input = createSchema.parse(req.body);
+  const userWallet = req.user.walletAddress || req.user.sub;
   const chama = await Chama.create({
     ...input,
-    members: [{ walletAddress: req.user.sub, phone: input.phone, role: "admin", trustScore: 80 }]
+    members: [{ walletAddress: userWallet, phone: input.phone, role: "admin", trustScore: 80 }]
   });
 
   res.status(201).json({ chama });
@@ -32,9 +33,10 @@ router.post("/", requireAuth, async (req, res) => {
 router.post("/:id/join", requireAuth, async (req, res) => {
   const schema = z.object({ phone: z.string().min(9) });
   const { phone } = schema.parse(req.body);
+  const userWallet = req.user.walletAddress || req.user.sub;
   const chama = await Chama.findByIdAndUpdate(
     req.params.id,
-    { $addToSet: { members: { walletAddress: req.user.sub, phone, role: "member", trustScore: 50 } } },
+    { $addToSet: { members: { walletAddress: userWallet, phone, role: "member", trustScore: 50 } } },
     { new: true }
   );
 
@@ -53,7 +55,10 @@ router.post("/:id/invite", requireAuth, async (req, res) => {
     return res.status(404).json({ error: "Chama not found" });
   }
 
-  const requester = chama.members.find(m => m.walletAddress.toLowerCase() === req.user.sub.toLowerCase());
+  const requester = chama.members.find(m => 
+    m.walletAddress.toLowerCase() === req.user.sub.toLowerCase() ||
+    (req.user.walletAddress && m.walletAddress.toLowerCase() === req.user.walletAddress.toLowerCase())
+  );
   if (!requester || requester.role !== "admin") {
     return res.status(403).json({ error: "Only admins can invite members" });
   }

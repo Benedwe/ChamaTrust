@@ -13,6 +13,7 @@ import ussdRoutes from "./routes/ussd.js";
 import aiRoutes from "./routes/ai.js";
 import meetingRoutes from "./routes/meetings.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { mockDbMiddleware } from "./middleware/mockDbMiddleware.js";
 import { connectDB } from "./db.js";
 
 const app = express();
@@ -42,11 +43,13 @@ app.use(rateLimit({ windowMs: 60_000, limit: 120, validate: { ip: false } }));
 app.use(async (req, res, next) => {
   try {
     await connectDB();
-    next();
   } catch (error) {
-    next(error);
+    console.warn("Failed to connect to MongoDB, proceeding with database offline:", error.message);
   }
+  next();
 });
+
+app.use(mockDbMiddleware);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "chamatrust-api" });

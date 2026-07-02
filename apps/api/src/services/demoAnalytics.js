@@ -4,12 +4,18 @@ import { Meeting } from "../models/Meeting.js";
 import { Transaction } from "../models/Transaction.js";
 
 export async function getDemoAnalytics() {
-  const [chama, loans, transactions, latestMeeting] = await Promise.all([
-    Chama.findOne().sort({ createdAt: -1 }).lean(),
-    Loan.find().sort({ createdAt: -1 }).limit(25).lean(),
-    Transaction.find().sort({ createdAt: -1 }).limit(100).lean(),
-    Meeting.findOne().sort({ scheduledFor: -1 }).lean()
-  ]);
+  try {
+    const mongoose = await import("mongoose");
+    if (!mongoose.default.connection || mongoose.default.connection.readyState !== 1) {
+      return fallbackAnalytics();
+    }
+
+    const [chama, loans, transactions, latestMeeting] = await Promise.all([
+      Chama.findOne().sort({ createdAt: -1 }).lean(),
+      Loan.find().sort({ createdAt: -1 }).limit(25).lean(),
+      Transaction.find().sort({ createdAt: -1 }).limit(100).lean(),
+      Meeting.findOne().sort({ scheduledFor: -1 }).lean()
+    ]);
 
   const deposits = transactions.filter((transaction) => transaction.direction === "deposit");
   const repayments = transactions.filter((transaction) => transaction.direction === "repayment");
@@ -41,6 +47,10 @@ export async function getDemoAnalytics() {
       highRiskTransactionCount: highRiskTransactions.length
     }
   };
+  } catch (err) {
+    console.warn("DB query failed in getDemoAnalytics, using fallback mock data:", err.message);
+    return fallbackAnalytics();
+  }
 }
 
 export function fallbackAnalytics() {

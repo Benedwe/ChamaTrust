@@ -32,7 +32,9 @@ import {
   connectWallet,
   getAvailableWallets,
   isAnyWalletInstalled,
-  signApprovalMessage
+  signApprovalMessage,
+  reconnectWallet,
+  disconnectWallet
 } from "./lib/wallet";
 import { WalletPicker } from "./components/WalletPicker";
 import { AgriFinance } from "./components/AgriFinance";
@@ -42,6 +44,7 @@ import { GovernanceAi } from "./components/GovernanceAi";
 import { MeetingSummarizer } from "./components/MeetingSummarizer";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import { CreateChamaModal } from "./components/CreateChamaModal";
+import { JoinChamaModal } from "./components/JoinChamaModal";
 import { AuthScreen } from "./components/AuthScreen";
 import { InviteMembersModal } from "./components/InviteMembersModal";
 import { getSession, clearSession, linkWallet } from "./lib/auth";
@@ -259,15 +262,51 @@ function App() {
   const [pollReference, setPollReference] = useState(null);
   const [reconciliationStatus, setReconciliationStatus] = useState("");
   const [isCreateChamaOpen, setIsCreateChamaOpen] = useState(false);
+  const [isJoinChamaOpen, setIsJoinChamaOpen] = useState(false);
   const [createdChamaName, setCreatedChamaName] = useState("");
   const [inviteChamaId, setInviteChamaId] = useState(null);
   const [session, setSession] = useState(getSession);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  // Live data fetched from API
+  const [liveChamas, setLiveChamas] = useState([]);
+  const [liveLoans, setLiveLoans] = useState([]);
+  const [liveTransactions, setLiveTransactions] = useState([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const monthlyPercent = useMemo(() => Math.round((group.balance / group.contributionTarget) * 100), []);
 
   useEffect(() => {
     setWalletInstalled(isAnyWalletInstalled());
+    
+    // Auto-reconnect previously connected wallet
+    reconnectWallet().then((result) => {
+      if (result?.address) {
+        setWallet(result.address);
+        setWalletNetwork(result.network);
+        setConnectedWalletName(result.walletName);
+        setWalletStatus("connected");
+      }
+    });
   }, []);
+
+  // Fetch live dashboard data
+  useEffect(() => {
+    async function fetchDashboardData() {
+      setDashboardLoading(true);
+      try {
+        const [chamasRes, loansRes] = await Promise.all([
+          apiFetch("/chamas").catch(() => null),
+          apiFetch("/loans").catch(() => null),
+        ]);
+        if (chamasRes?.chamas) setLiveChamas(chamasRes.chamas);
+        if (loansRes?.loans) setLiveLoans(loansRes.loans);
+      } catch (err) {
+        console.warn("Dashboard fetch failed, using demo data:", err.message);
+      } finally {
+        setDashboardLoading(false);
+      }
+    }
+    fetchDashboardData();
+  }, [session]);
 
   useEffect(() => {
     if (!pollReference || !transactionResult) return;
@@ -346,22 +385,15 @@ function App() {
   }
 
   function handleWallet() {
-    if (wallet) return;
-
-    if (!isAnyWalletInstalled()) {
-      setWalletInstalled(false);
-      setWalletStatus("error");
-      setWalletError("No Web3 wallet found. Install MetaMask or Core, then try again.");
+    if (wallet) {
+      disconnectWallet();
+      setWallet(null);
+      setWalletStatus("idle");
+      setConnectedWalletName(null);
       return;
     }
 
-    const available = getAvailableWallets();
-    if (available.length > 1) {
-      setShowWalletPicker(true);
-      return;
-    }
-
-    connectSelectedWallet(available[0]?.id);
+    setShowWalletPicker(true);
   }
 
   function dismissToast() {
@@ -371,8 +403,8 @@ function App() {
 
   const handleTransactionClick = async () => {
     if (!session?.token) {
-      setTransactionError("Please log in before creating a payment request.");
       setIsAuthOpen(true);
+      setTransactionError("Please log in to deposit or withdraw funds.");
       return;
     }
 
@@ -431,19 +463,31 @@ function App() {
     <main className="mesh min-h-screen text-white">
       <AnimatePresence>
         {isAuthOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-ink"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            style={{ background: "rgba(6,13,24,0.88)", backdropFilter: "blur(12px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setIsAuthOpen(false); }}
           >
-            <AuthScreen
-              onAuth={(token, user) => {
-                setSession({ token, user });
-                setIsAuthOpen(false);
-              }}
-              onClose={() => setIsAuthOpen(false)}
-            />
+            <motion.div
+              initial={{ scale: 0.94, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.94, y: 20 }}
+              transition={{ type: "spring", stiffness: 280, damping: 26 }}
+              style={{ width: "100%", maxWidth: 500 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <AuthScreen
+                onAuth={(token, user) => {
+                  setSession({ token, user });
+                  setIsAuthOpen(false);
+                }}
+                onClose={() => setIsAuthOpen(false)}
+                asModal
+              />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -489,7 +533,14 @@ function App() {
               <div className="flex items-center gap-2">
               {session ? (
                 <button
-                  onClick={() => { clearSession(); setSession(null); }}
+                  onClick={() => {
+                    clearSession();
+                    setSession(null);
+                    disconnectWallet();
+                    setWallet(null);
+                    setWalletStatus("idle");
+                    setConnectedWalletName(null);
+                  }}
                   className="flex min-h-10 items-center gap-2 rounded-lg border border-ink/15 bg-ink/5 px-3 text-sm font-bold text-ink shadow-sm hover:bg-ink/10 md:border-white/20 md:bg-white/5 md:text-white md:hover:bg-white/10"
                 >
                   Log Out ({session.user.fullName.split(' ')[0]})
@@ -506,10 +557,10 @@ function App() {
               <button
                 id="wallet-connect-btn"
                 onClick={handleWallet}
-                disabled={walletStatus === "connecting" || !!wallet}
+                disabled={walletStatus === "connecting"}
                 title={
                   wallet
-                    ? `Connected via ${connectedWalletName || "wallet"} on ${walletNetwork}: ${wallet}`
+                    ? `Connected via ${connectedWalletName || "wallet"} on ${walletNetwork}: ${wallet}. Click to disconnect.`
                     : !walletInstalled
                     ? "Install a Web3 wallet (MetaMask, Core, etc.)"
                     : "Connect your Web3 wallet"
@@ -530,7 +581,7 @@ function App() {
                     : walletStatus === "error"
                     ? "1px solid rgba(239,68,68,0.4)"
                     : "1px solid rgba(232,65,66,0.4)",
-                  cursor: wallet ? "default" : walletStatus === "connecting" ? "wait" : "pointer",
+                  cursor: walletStatus === "connecting" ? "wait" : "pointer",
                   transition: "all 0.25s ease",
                   minWidth: "148px",
                 }}
@@ -547,10 +598,7 @@ function App() {
                     display: "inline-block",
                   }} />
                 ) : (
-                  /* Core "A" triangle mark (SVG) */
-                  <svg width="15" height="15" viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M16 3 L30 28 H2 Z" fill="white" opacity="0.9" />
-                  </svg>
+                  <WalletCards size={15} style={{ flexShrink: 0 }} />
                 )}
                 <span className="hidden sm:inline">
                   {walletStatus === "connecting"
@@ -655,34 +703,61 @@ function App() {
             <p className="mt-4 max-w-2xl text-sm leading-6 text-emerald-50 md:text-base">
               Members use familiar Mobile Money flows while treasury actions settle transparently through Avalanche.
             </p>
-            {!session && (
+            {!session ? (
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
+                  id="hero-login-btn"
                   onClick={() => setIsAuthOpen(true)}
                   className="flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-extrabold text-ink shadow-lg hover:bg-mint/90"
+                  style={{ boxShadow: "0 0 24px rgba(0,210,110,0.4)" }}
                 >
                   <LogIn size={16} />
-                  Login to ChamaTrust
+                  Login / Sign Up — It's Free
                 </button>
                 <button
                   onClick={handleWallet}
-                  disabled={walletStatus === "connecting" || !!wallet}
+                  disabled={walletStatus === "connecting"}
                   className="flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-5 py-3 text-sm font-extrabold text-white hover:bg-white/15"
                 >
                   <WalletCards size={16} />
                   {wallet ? truncateAddress(wallet) : "Connect Wallet"}
                 </button>
               </div>
+            ) : (
+              <div className="mt-4 flex items-center gap-2">
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#00d26a", boxShadow: "0 0 8px #00d26a", display: "inline-block" }} />
+                <span className="text-sm font-bold text-emerald-200">Signed in as {session.user?.fullName?.split(" ")[0]}</span>
+              </div>
             )}
             <div className="mt-6 grid grid-cols-4 gap-2">
-              {["Join", "Deposit", "Vote"].map((action) => (
-                <button key={action} className="rounded-lg bg-white px-3 py-3 text-sm font-extrabold text-ink">
-                  {action}
-                </button>
-              ))}
-              <button 
-                onClick={() => setIsCreateChamaOpen(true)}
-                className="rounded-lg bg-mint px-3 py-3 text-sm font-extrabold text-ink flex items-center justify-center gap-1"
+              <button
+                id="hero-join-btn"
+                onClick={() => { if (!session) { setIsAuthOpen(true); } else { setIsJoinChamaOpen(true); } }}
+                className="rounded-lg bg-white px-3 py-3 text-sm font-extrabold text-ink hover:bg-white/90 transition-colors"
+              >
+                Join
+              </button>
+              <button
+                id="hero-deposit-btn"
+                onClick={() => {
+                  if (!session) { setIsAuthOpen(true); }
+                  else { setActiveTab("Dashboard"); document.getElementById("mobile-money-card")?.scrollIntoView({ behavior: "smooth" }); }
+                }}
+                className="rounded-lg bg-white px-3 py-3 text-sm font-extrabold text-ink hover:bg-white/90 transition-colors"
+              >
+                Deposit
+              </button>
+              <button
+                id="hero-vote-btn"
+                onClick={() => { if (!session) { setIsAuthOpen(true); } else { setActiveTab("Governance"); } }}
+                className="rounded-lg bg-white px-3 py-3 text-sm font-extrabold text-ink hover:bg-white/90 transition-colors"
+              >
+                Vote
+              </button>
+              <button
+                id="hero-create-btn"
+                onClick={() => { if (!session) { setIsAuthOpen(true); } else { setIsCreateChamaOpen(true); } }}
+                className="rounded-lg bg-mint px-3 py-3 text-sm font-extrabold text-ink flex items-center justify-center gap-1 hover:bg-mint/90 transition-colors"
               >
                 Create ✚
               </button>
@@ -747,7 +822,7 @@ function App() {
             <SavingsChart />
           </Card>
 
-          <Card>
+          <Card id="mobile-money-card">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-black">Mobile Money Bridge</h2>
               <Banknote size={20} />
@@ -798,7 +873,18 @@ function App() {
             {!showUssdInstructions ? (
               <>
                 <FlowRail direction={activeFlow} provider={provider} />
-                <button 
+                {!session && (
+                  <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3 text-center">
+                    <p className="text-xs font-bold text-cyan-300">Log in to send real transactions</p>
+                    <button
+                      onClick={() => setIsAuthOpen(true)}
+                      className="mt-2 rounded-lg bg-mint px-4 py-2 text-xs font-extrabold text-ink hover:bg-mint/90"
+                    >
+                      Login / Sign Up
+                    </button>
+                  </div>
+                )}
+                <button
                   onClick={handleTransactionClick}
                   disabled={isProcessing}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-canopy px-4 py-3 font-extrabold text-white disabled:opacity-70">
@@ -892,31 +978,70 @@ function App() {
           <Card className="xl:col-span-2">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-black">Governance And Loans</h2>
-              <Vote size={20} />
+              <div className="flex items-center gap-2">
+                {dashboardLoading && <Loader2 size={14} className="animate-spin text-slate-400" />}
+                <Vote size={20} />
+              </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {proposals.map((proposal) => (
-                <div key={proposal.id} className="rounded-lg bg-white/75 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold text-slate-500">{proposal.id}</p>
-                      <h3 className="text-lg font-black">{proposal.member}</h3>
-                      <p className="text-sm text-slate-600">{proposal.purpose}</p>
+            {liveLoans.length > 0 ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                {liveLoans.slice(0, 4).map((loan) => (
+                  <div key={loan._id} className="rounded-lg bg-white/75 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-bold text-slate-500">{loan.proposalId || loan._id?.slice(-6)}</p>
+                        <h3 className="text-lg font-black">{loan.borrower?.slice(0, 8) || "Member"}…</h3>
+                        <p className="text-sm text-slate-600">{loan.purpose}</p>
+                      </div>
+                      <span className={`rounded-lg px-2 py-1 text-xs font-extrabold ${
+                        loan.riskLevel === "Low" ? "bg-emerald-100 text-canopy" :
+                        loan.riskLevel === "High" ? "bg-rose-100 text-rose-700" :
+                        "bg-amber-100 text-amber-700"
+                      }`}>{loan.riskLevel || "Medium"}</span>
                     </div>
-                    <span className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-extrabold text-canopy">{proposal.risk}</span>
+                    <p className="mt-4 text-2xl font-black">{formatMoney(loan.amount)}</p>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded bg-emerald-50 p-2"><b>{loan.votes?.filter(v => v.support).length || 0}</b><p className="text-xs">Approved</p></div>
+                      <div className="rounded bg-rose-50 p-2"><b>{loan.votes?.filter(v => !v.support).length || 0}</b><p className="text-xs">Rejected</p></div>
+                      <div className="rounded bg-cyan-50 p-2"><b>{loan.status}</b><p className="text-xs">Status</p></div>
+                    </div>
+                    <button
+                      onClick={() => { if (!session) { setIsAuthOpen(true); } else { setActiveTab("Governance"); } }}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 py-3 text-sm font-extrabold text-white"
+                    >
+                      {session ? <><span>Vote now</span> <ChevronRight size={16} /></> : <><LogIn size={14} /><span>Login to Vote</span></>}
+                    </button>
                   </div>
-                  <p className="mt-4 text-2xl font-black">{formatMoney(proposal.amount)}</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded bg-emerald-50 p-2"><b>{proposal.approved}</b><p className="text-xs">Approved</p></div>
-                    <div className="rounded bg-rose-50 p-2"><b>{proposal.rejected}</b><p className="text-xs">Rejected</p></div>
-                    <div className="rounded bg-cyan-50 p-2"><b>{proposal.needed}</b><p className="text-xs">Needed</p></div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {proposals.map((proposal) => (
+                  <div key={proposal.id} className="rounded-lg bg-white/75 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-bold text-slate-500">{proposal.id}</p>
+                        <h3 className="text-lg font-black">{proposal.member}</h3>
+                        <p className="text-sm text-slate-600">{proposal.purpose}</p>
+                      </div>
+                      <span className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-extrabold text-canopy">{proposal.risk}</span>
+                    </div>
+                    <p className="mt-4 text-2xl font-black">{formatMoney(proposal.amount)}</p>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded bg-emerald-50 p-2"><b>{proposal.approved}</b><p className="text-xs">Approved</p></div>
+                      <div className="rounded bg-rose-50 p-2"><b>{proposal.rejected}</b><p className="text-xs">Rejected</p></div>
+                      <div className="rounded bg-cyan-50 p-2"><b>{proposal.needed}</b><p className="text-xs">Needed</p></div>
+                    </div>
+                    <button
+                      onClick={() => { if (!session) { setIsAuthOpen(true); } else { setActiveTab("Governance"); } }}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 py-3 text-sm font-extrabold text-white"
+                    >
+                      {session ? <><span>Vote now</span> <ChevronRight size={16} /></> : <><LogIn size={14} /><span>Login to Vote</span></>}
+                    </button>
                   </div>
-                  <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 py-3 text-sm font-extrabold text-white">
-                    Vote now <ChevronRight size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card>
@@ -1000,19 +1125,30 @@ function App() {
         )}
       </div>
       <VoiceAssistant />
-      <CreateChamaModal 
-        isOpen={isCreateChamaOpen} 
-        onClose={() => setIsCreateChamaOpen(false)} 
+      <CreateChamaModal
+        isOpen={isCreateChamaOpen}
+        onClose={() => setIsCreateChamaOpen(false)}
         onSuccess={(chama) => {
           setIsCreateChamaOpen(false);
           setCreatedChamaName(chama.name);
           setInviteChamaId(chama._id);
+          // Refresh live chamas list after creation
+          apiFetch("/chamas").then(r => { if (r?.chamas) setLiveChamas(r.chamas); }).catch(() => {});
         }}
         onLoginRequest={() => setIsAuthOpen(true)}
       />
-      <InviteMembersModal 
-        chamaId={inviteChamaId} 
-        onClose={() => setInviteChamaId(null)} 
+      <JoinChamaModal
+        isOpen={isJoinChamaOpen}
+        onClose={() => setIsJoinChamaOpen(false)}
+        onSuccess={(chama) => {
+          setIsJoinChamaOpen(false);
+          setCreatedChamaName(`Joined ${chama.name}!`);
+        }}
+        onLoginRequest={() => setIsAuthOpen(true)}
+      />
+      <InviteMembersModal
+        chamaId={inviteChamaId}
+        onClose={() => setInviteChamaId(null)}
       />
     </main>
   );

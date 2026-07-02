@@ -199,7 +199,7 @@ function SignInForm({ onSuccess }) {
 }
 
 /* ── Main AuthScreen ──────────────────────────────────────── */
-export function AuthScreen({ onAuth, onClose }) {
+export function AuthScreen({ onAuth, onClose, asModal = false }) {
   const [tab, setTab] = useState("signin");
   const [apiOnline, setApiOnline] = useState(null);
 
@@ -211,6 +211,105 @@ export function AuthScreen({ onAuth, onClose }) {
     onAuth(token, user);
   }
 
+  const card = (
+    <motion.div
+      className="auth-card"
+      style={{ position: 'relative', ...(asModal ? { maxWidth: '100%', borderRadius: 24 } : {}) }}
+      initial={asModal ? { opacity: 0, scale: 0.96, y: 16 } : { opacity: 0, y: 32, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 24 }}
+    >
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', zIndex: 10 }}
+        >
+          <X size={20} />
+        </button>
+      )}
+      {/* Logo */}
+      <div className="auth-logo">
+        <div className="auth-logo-icon">
+          <Landmark size={22} color="#fff" />
+        </div>
+        <div className="auth-logo-text">
+          <div className="auth-logo-name">ChamaTrust</div>
+          <div className="auth-logo-tag">Avalanche-powered community finance</div>
+          {apiOnline !== null && (
+            <div style={{ fontSize: "11px", marginTop: 4, color: apiOnline ? "#00d26a" : "#fbbf24" }}>
+              {apiOnline ? "● API connected" : "● API offline — demo mode available"}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="auth-tabs" role="tablist">
+        <button
+          id="auth-tab-signup"
+          role="tab"
+          aria-selected={tab === "signup"}
+          className={`auth-tab${tab === "signup" ? " active" : ""}`}
+          onClick={() => setTab("signup")}
+        >
+          Create Account
+        </button>
+        <button
+          id="auth-tab-signin"
+          role="tab"
+          aria-selected={tab === "signin"}
+          className={`auth-tab${tab === "signin" ? " active" : ""}`}
+          onClick={() => setTab("signin")}
+        >
+          Sign In
+        </button>
+      </div>
+
+      {/* Forms */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, x: tab === "signup" ? -16 : 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: tab === "signup" ? 16 : -16 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+        >
+          {tab === "signup"
+            ? <SignUpForm onSuccess={handleSuccess} />
+            : <SignInForm onSuccess={handleSuccess} />
+          }
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Feature pills */}
+      <div className="auth-features">
+        {FEATURES.map(f => (
+          <div key={f.label} className="auth-feature-pill">
+            {f.icon} {f.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Demo hint */}
+      <p className="auth-demo-hint">
+        No backend running?{" "}
+        <button
+          id="auth-demo-btn"
+          onClick={() =>
+            registerDemo({ fullName: "Demo User", email: "demo@chamatrust.io", phone: "+254700000000" })
+              .then(d => handleSuccess(d.token, d.user))
+          }
+        >
+          Enter demo mode
+        </button>
+      </p>
+    </motion.div>
+  );
+
+  if (asModal) {
+    return card;
+  }
+
   return (
     <div className="auth-root">
       {/* Ambient orbs */}
@@ -218,99 +317,7 @@ export function AuthScreen({ onAuth, onClose }) {
       <div className="auth-orb auth-orb-2" />
       <div className="auth-orb auth-orb-3" />
       <div className="auth-grid" />
-
-      <motion.div
-        className="auth-card"
-        style={{ position: 'relative' }}
-        initial={{ opacity: 0, y: 32, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 24 }}
-      >
-        {onClose && (
-          <button
-            onClick={onClose}
-            style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', zIndex: 10 }}
-          >
-            <X size={20} />
-          </button>
-        )}
-        {/* Logo */}
-        <div className="auth-logo">
-          <div className="auth-logo-icon">
-            <Landmark size={22} color="#fff" />
-          </div>
-          <div className="auth-logo-text">
-            <div className="auth-logo-name">ChamaTrust</div>
-            <div className="auth-logo-tag">Avalanche-powered community finance</div>
-            {apiOnline !== null && (
-              <div style={{ fontSize: "11px", marginTop: 4, color: apiOnline ? "#00d26a" : "#fbbf24" }}>
-                {apiOnline ? "● API connected" : "● API offline — demo mode available"}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="auth-tabs" role="tablist">
-          <button
-            id="auth-tab-signup"
-            role="tab"
-            aria-selected={tab === "signup"}
-            className={`auth-tab${tab === "signup" ? " active" : ""}`}
-            onClick={() => setTab("signup")}
-          >
-            Create Account
-          </button>
-          <button
-            id="auth-tab-signin"
-            role="tab"
-            aria-selected={tab === "signin"}
-            className={`auth-tab${tab === "signin" ? " active" : ""}`}
-            onClick={() => setTab("signin")}
-          >
-            Sign In
-          </button>
-        </div>
-
-        {/* Forms */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, x: tab === "signup" ? -16 : 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: tab === "signup" ? 16 : -16 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
-          >
-            {tab === "signup"
-              ? <SignUpForm onSuccess={handleSuccess} />
-              : <SignInForm onSuccess={handleSuccess} />
-            }
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Feature pills */}
-        <div className="auth-features">
-          {FEATURES.map(f => (
-            <div key={f.label} className="auth-feature-pill">
-              {f.icon} {f.label}
-            </div>
-          ))}
-        </div>
-
-        {/* Demo hint */}
-        <p className="auth-demo-hint">
-          No backend running?{" "}
-          <button
-            id="auth-demo-btn"
-            onClick={() =>
-              registerDemo({ fullName: "Demo User", email: "demo@chamatrust.io", phone: "+254700000000" })
-                .then(d => handleSuccess(d.token, d.user))
-            }
-          >
-            Enter demo mode
-          </button>
-        </p>
-      </motion.div>
+      {card}
     </div>
   );
 }
