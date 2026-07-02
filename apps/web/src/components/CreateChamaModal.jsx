@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Landmark } from "lucide-react";
 import { getSession } from "../lib/auth";
 import { apiFetch } from "../lib/api";
+import { getChamaTrustAddress } from "../lib/contracts";
 
 export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest }) {
   const [loading, setLoading] = useState(false);
@@ -29,10 +30,13 @@ export function CreateChamaModal({ isOpen, onClose, onSuccess, onLoginRequest })
     }
 
     try {
-      // Dummy treasury address generation for demo
-      const randomHex = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
-      const treasuryAddress = `0x${randomHex}`;
-      
+      const treasuryAddress = await getChamaTrustAddress();
+      if (!treasuryAddress) {
+        throw new Error(
+          "ChamaTrust contract is not deployed yet. Run npm run deploy:fuji and redeploy the site."
+        );
+      }
+
       const payload = {
         name: formData.name,
         country: formData.country,

@@ -5,3 +5,8 @@ node_modules
 .npm-cache/
 artifacts/
 cache/
+.env
+.env.local
+.env.*.local
+deployments/
+apps/web/dist/

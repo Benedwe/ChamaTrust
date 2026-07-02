@@ -39,10 +39,11 @@ async function main() {
 
   const stablecoinAddress = await stablecoin.getAddress();
   const chamaTrustAddress = await chamaTrust.getAddress();
+  const network = await hre.ethers.provider.getNetwork();
 
   const deployment = {
     network: hre.network.name,
-    chainId: 43113,
+    chainId: Number(network.chainId),
     deployer: deployer.address,
     MockStablecoin: stablecoinAddress,
     ChamaTrust: chamaTrustAddress,
@@ -60,8 +61,23 @@ async function main() {
 
   const webPublicDir = path.join(rootDir, "apps/web/public/contracts");
   fs.mkdirSync(webPublicDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(webPublicDir, `${hre.network.name}.json`),
+    JSON.stringify(deployment, null, 2)
+  );
   if (hre.network.name === "fuji") {
     fs.writeFileSync(path.join(webPublicDir, "fuji.json"), JSON.stringify(deployment, null, 2));
+  }
+
+  const artifactNames = ["ChamaTrust", "MockStablecoin"];
+  const abiDir = path.join(webPublicDir, "abi");
+  fs.mkdirSync(abiDir, { recursive: true });
+  for (const name of artifactNames) {
+    const artifact = await hre.artifacts.readArtifact(name);
+    fs.writeFileSync(
+      path.join(abiDir, `${name}.json`),
+      JSON.stringify({ abi: artifact.abi, contractName: name }, null, 2)
+    );
   }
 
   console.log("Deployer:", deployer.address);
