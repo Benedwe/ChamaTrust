@@ -197,14 +197,7 @@ cp .env.example .env
 | `JWT_SECRET`                | JWT signing secret                   |
 | `FUJI_RPC_URL`              | Avalanche Fuji RPC endpoint          |
 | `PRIVATE_KEY`               | Deployer wallet private key          |
-| `TREASURY_SETTLEMENT_WALLET`| On-chain treasury address            |
-| `MPESA_CONSUMER_KEY`        | M-Pesa API key                       |
-| `MPESA_CONSUMER_SECRET`     | M-Pesa API secret                    |
-| `AIRTEL_CLIENT_ID`          | Airtel Money client ID               |
-| `AIRTEL_CLIENT_SECRET`      | Airtel Money client secret           |
-| `TIGO_PESA_CLIENT_ID`       | Tigo Pesa client ID                  |
-| `HALOPESA_CLIENT_ID`        | HaloPesa client ID                   |
-| `HALOPESA_CLIENT_SECRET`     | HaloPesa client secret               |
+| `TREASURY_SETTLEMENT_WALLET`| On-chain treasury address            |               |
 | `PESAPAL_CONSUMER_KEY`      | Pesapal merchant consumer key        |
 | `PESAPAL_CONSUMER_SECRET`   | Pesapal merchant consumer secret     |
 | `PESAPAL_CALLBACK_URL`      | Pesapal webhook/return callback URL  |
